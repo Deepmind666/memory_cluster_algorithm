@@ -448,3 +448,22 @@
 - Review Checklist:
   - [x] 本地与远端commit一致
   - [x] 未提交凭证文件
+
+## Entry 022
+- Timestamp: 2026-02-09 23:58:38 +08:00
+- Stage: R-006授权潜力评估与申请策略
+- Actions:
+  - 基于法条+审查口径+先行技术组合完成授权潜力分级评估
+  - 新增专门评估文档并给出分法域申请建议与时间窗建议
+- Files Reviewed:
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/prior_art/feature_matrix.md`
+  - `docs/prior_art/search_log.md`
+  - `cnipa.gov.cn法条与AI指引页面`
+- Files Changed:
+  - `docs/patent_kit/09_授权潜力评估与下一步建议.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 结论含法域差异
+  - [x] 风险点与法条对应
+  - [x] 下一步建议可执行
