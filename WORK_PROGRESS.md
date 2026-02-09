@@ -661,3 +661,81 @@
   - [x] 保护逻辑新增回归测试
   - [x] 全量测试18/18通过
   - [x] 文档计数与测试结果一致
+
+## Entry R-007-Research (Claude Opus)
+- Timestamp: 2026-02-10 17:30:00 +08:00
+- Stage: R-007 快申计划第 7-9 天准备性深度研究（by Claude Opus 4.6）
+- Actions:
+  - 运行消融实验获取最新指标数据（5 场景全部运行成功）
+  - 审读全部 10 个 patent_kit 文件 + 3 个 eval 文件
+  - 分析 FULL 场景压缩回归根因（compression_ratio=0.974）
+  - 确认 dedup_reduction=0 为合成数据特性（非 bug）
+  - 评估快申计划第 7-9 天交付物完成度
+  - 识别 2 个 P0 专利缺口 + 2 个 P1 更新需求 + 4 个 P2 增强建议
+  - 提供"最接近现有技术-区别特征-技术效果"三联对比表草案
+  - 深度分析代码边界行为（trace_refs 溢出、DMG 无共同 slot、特殊阈值参数）
+- Files Reviewed:
+  - `docs/patent_kit/*.md`（全部 10 个）
+  - `docs/eval/ablation_report_cn.md`
+  - `docs/eval/ablation_explained_cn.md`
+  - `docs/eval/demo_walkthrough.md`
+  - `docs/design/cn_fast_track_patent_plan.md`
+  - `scripts/run_ablation.py`
+  - `outputs/ablation_metrics.json`（运行生成）
+  - `src/memory_cluster/compress.py`（边界分析）
+  - `src/memory_cluster/cluster.py`（边界分析）
+  - `src/memory_cluster/pipeline.py`（流程追踪）
+  - `src/memory_cluster/preference.py`（验证 P2-NEW-9 修复持续有效）
+  - `src/memory_cluster/eval.py`（dedup_reduction 逻辑追踪）
+- Files Changed:
+  - `.claude.md`（追加 R-007 研究报告 + 三联对比表草案）
+  - `WORK_PROGRESS.md`（本条目）
+- Review Checklist:
+  - [x] 消融实验 5 场景全部运行成功
+  - [x] 18/18 测试全绿（验证项目稳定性）
+  - [x] FULL 压缩回归根因明确（trade-off，非 bug）
+  - [x] patent_kit 10 文件逐一审读
+  - [x] P0 缺口识别：08 三联表 + 05 量化数据
+  - [x] P1 更新：09 评估过时 + FULL trade-off 文档化
+  - [x] 三联对比表草案已提供（含 4 个对比文件逐行对比）
+  - [x] 权利要求 14-16 增强建议已提供
+  - [x] 自查 SC-007 完成
+
+## Entry 028
+- Timestamp: 2026-02-10 01:18:47 +08:00
+- Stage: 合并阶段算法优化（Merge Upper-Bound Prune）
+- Actions:
+  - 在 `cluster.py` 合并流程加入余弦上界剪枝（安全剪枝，不改变正确性）
+  - 新增指标 `merge_pairs_pruned_by_bound`，用于量化剪枝收益
+  - 将剪枝能力接入配置与 CLI 开关（默认关闭，按需开启）
+  - 新增 `test_merge_upper_bound_prune.py`（结果一致性 + 剪枝触发）
+  - 新增性能对照脚本 `scripts/run_prune_benchmark.py`
+  - 运行对照实验并生成 `docs/eval/prune_benchmark_report.md`
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_merge_upper_bound_prune.py`
+  - `scripts/run_prune_benchmark.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `README.md`
+- Files Changed:
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_merge_upper_bound_prune.py`
+  - `scripts/run_prune_benchmark.py`
+  - `docs/eval/prune_benchmark_report.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `README.md`
+  - `data/examples/preference_profile.json`
+- Review Checklist:
+  - [x] 新增单测通过（merge prune: 2/2）
+  - [x] 全量单测通过（20/20）
+  - [x] 默认配置无回归（benchmark latest 2.495ms 平均）
+  - [x] 对照实验可复现并产出报告
+  - [x] 结果一致性验证（cluster_count_equal=true）

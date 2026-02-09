@@ -37,10 +37,11 @@ python -m pip install -r requirements.txt
 python -m src.memory_cluster.cli ingest --input data/examples/multi_agent_memory_fragments.jsonl --store outputs/memory_store.jsonl
 python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85
 python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_l2.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --enable-l2-clusters --l2-min-children 2
-python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-l2-clusters --l2-min-children 2
+python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-merge-upper-bound-prune --merge-prune-dims 48 --enable-l2-clusters --l2-min-children 2
 python -m src.memory_cluster.cli query --state outputs/cluster_state.json --query "alpha 冲突参数" --top-k 3 --offset 0 --expand
 python -m src.memory_cluster.cli query --state outputs/cluster_state_l2.json --query "method topic" --top-k 3 --cluster-level l2 --expand
 python scripts/run_ablation.py --output outputs/ablation_metrics.json --report docs/eval/ablation_report_cn.md
+python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 

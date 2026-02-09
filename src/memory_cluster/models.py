@@ -148,6 +148,8 @@ class PreferenceConfig:
     arb_max_scale: float = 1.6
     enable_dual_merge_guard: bool = False
     merge_conflict_compat_threshold: float = 0.55
+    enable_merge_upper_bound_prune: bool = False
+    merge_prune_dims: int = 48
     hard_keep_tags: list[str] = field(default_factory=list)
     protected_path_prefixes: list[str] = field(default_factory=list)
     protected_scopes: list[str] = field(default_factory=lambda: ["global_task", "current_task"])
@@ -175,6 +177,8 @@ class PreferenceConfig:
             arb_max_scale=float(data.get("arb_max_scale", 1.6)),
             enable_dual_merge_guard=bool(data.get("enable_dual_merge_guard", False)),
             merge_conflict_compat_threshold=float(data.get("merge_conflict_compat_threshold", 0.55)),
+            enable_merge_upper_bound_prune=bool(data.get("enable_merge_upper_bound_prune", False)),
+            merge_prune_dims=max(0, int(data.get("merge_prune_dims", 48))),
             hard_keep_tags=[str(x) for x in (data.get("hard_keep_tags") or [])],
             protected_path_prefixes=[str(x) for x in (data.get("protected_path_prefixes") or [])],
             protected_scopes=[str(x) for x in (data.get("protected_scopes") or ["global_task", "current_task"])],

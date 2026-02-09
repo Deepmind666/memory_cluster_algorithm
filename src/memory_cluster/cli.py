@@ -60,6 +60,10 @@ def cmd_build(args: argparse.Namespace) -> int:
         preference.enable_dual_merge_guard = True
     if args.merge_conflict_compat_threshold is not None:
         preference.merge_conflict_compat_threshold = float(args.merge_conflict_compat_threshold)
+    if args.enable_merge_upper_bound_prune:
+        preference.enable_merge_upper_bound_prune = True
+    if args.merge_prune_dims is not None:
+        preference.merge_prune_dims = max(0, int(args.merge_prune_dims))
     if args.hard_keep_tag:
         preference.hard_keep_tags = list(dict.fromkeys(preference.hard_keep_tags + list(args.hard_keep_tag)))
     if args.protect_path_prefix:
@@ -133,6 +137,8 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--enable-adaptive-budget", action="store_true")
     build.add_argument("--enable-dual-merge-guard", action="store_true")
     build.add_argument("--merge-conflict-compat-threshold", type=float, default=None)
+    build.add_argument("--enable-merge-upper-bound-prune", action="store_true")
+    build.add_argument("--merge-prune-dims", type=int, default=None)
     build.add_argument("--hard-keep-tag", action="append", default=None)
     build.add_argument("--protect-path-prefix", action="append", default=None)
     build.add_argument("--protect-scope", action="append", default=None)

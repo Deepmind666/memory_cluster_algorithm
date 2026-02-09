@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import re
 
 from .embed import cosine_similarity
@@ -24,17 +25,22 @@ class IncrementalClusterer:
         category_strict: bool = False,
         enable_dual_merge_guard: bool = False,
         merge_conflict_compat_threshold: float = 0.55,
+        enable_merge_upper_bound_prune: bool = False,
+        merge_prune_dims: int = 48,
     ) -> None:
         self.similarity_threshold = similarity_threshold
         self.merge_threshold = merge_threshold
         self.category_strict = category_strict
         self.enable_dual_merge_guard = enable_dual_merge_guard
         self.merge_conflict_compat_threshold = merge_conflict_compat_threshold
+        self.enable_merge_upper_bound_prune = enable_merge_upper_bound_prune
+        self.merge_prune_dims = max(0, int(merge_prune_dims))
         self._counter = 0
         self._id_pattern = re.compile(r"^cluster-(\d+)$")
         self.merge_attempts = 0
         self.merges_applied = 0
         self.merges_blocked_by_guard = 0
+        self.merge_pairs_pruned_by_bound = 0
 
     def assign(
         self,
@@ -78,6 +84,7 @@ class IncrementalClusterer:
         merged = True
         while merged:
             merged = False
+            bound_cache = self._build_bound_cache(active)
             for i in range(len(active)):
                 base = active[i]
                 if base is None:
@@ -89,6 +96,11 @@ class IncrementalClusterer:
                     if not self._cluster_tags_compatible(base, other):
                         continue
                     self.merge_attempts += 1
+                    if self.enable_merge_upper_bound_prune and self.merge_prune_dims > 0:
+                        upper_bound = self._cosine_upper_bound_from_cache(base, other, bound_cache)
+                        if upper_bound < self.merge_threshold:
+                            self.merge_pairs_pruned_by_bound += 1
+                            continue
                     score = cosine_similarity(base.centroid, other.centroid)
                     if score < self.merge_threshold:
                         continue
@@ -100,6 +112,8 @@ class IncrementalClusterer:
                     self._merge_pair(base, other)
                     self.merges_applied += 1
                     active[j] = None
+                    self._refresh_bound_cache_entry(base, bound_cache)
+                    bound_cache.pop(other.cluster_id, None)
                     merged = True
             active = [item for item in active if item is not None]
         return active
@@ -167,7 +181,68 @@ class IncrementalClusterer:
             "merge_attempts": int(self.merge_attempts),
             "merges_applied": int(self.merges_applied),
             "merges_blocked_by_guard": int(self.merges_blocked_by_guard),
+            "merge_pairs_pruned_by_bound": int(self.merge_pairs_pruned_by_bound),
         }
+
+    def _build_bound_cache(self, clusters: list[MemoryCluster]) -> dict[str, dict[str, object]]:
+        if not self.enable_merge_upper_bound_prune or self.merge_prune_dims <= 0:
+            return {}
+        cache: dict[str, dict[str, object]] = {}
+        for cluster in clusters:
+            self._refresh_bound_cache_entry(cluster, cache)
+        return cache
+
+    def _refresh_bound_cache_entry(
+        self,
+        cluster: MemoryCluster,
+        cache: dict[str, dict[str, object]],
+    ) -> None:
+        if not self.enable_merge_upper_bound_prune or self.merge_prune_dims <= 0:
+            return
+        vector = cluster.centroid or []
+        dim = min(len(vector), self.merge_prune_dims)
+        prefix = vector[:dim]
+        prefix_norm_sq = sum(value * value for value in prefix)
+        full_norm_sq = sum(value * value for value in vector)
+        cache[cluster.cluster_id] = {
+            "prefix": prefix,
+            "prefix_norm_sq": prefix_norm_sq,
+            "full_norm_sq": full_norm_sq,
+        }
+
+    def _cosine_upper_bound_from_cache(
+        self,
+        cluster_a: MemoryCluster,
+        cluster_b: MemoryCluster,
+        cache: dict[str, dict[str, object]],
+    ) -> float:
+        if not self.enable_merge_upper_bound_prune or self.merge_prune_dims <= 0:
+            return 1.0
+        row_a = cache.get(cluster_a.cluster_id)
+        row_b = cache.get(cluster_b.cluster_id)
+        if not row_a or not row_b:
+            return 1.0
+
+        norm_sq_a = float(row_a.get("full_norm_sq") or 0.0)
+        norm_sq_b = float(row_b.get("full_norm_sq") or 0.0)
+        if norm_sq_a <= 0.0 or norm_sq_b <= 0.0:
+            return -1.0
+
+        prefix_a = row_a.get("prefix") or []
+        prefix_b = row_b.get("prefix") or []
+        prefix_dot = sum(float(x) * float(y) for x, y in zip(prefix_a, prefix_b))
+
+        prefix_norm_sq_a = float(row_a.get("prefix_norm_sq") or 0.0)
+        prefix_norm_sq_b = float(row_b.get("prefix_norm_sq") or 0.0)
+        rem_sq_a = max(0.0, norm_sq_a - prefix_norm_sq_a)
+        rem_sq_b = max(0.0, norm_sq_b - prefix_norm_sq_b)
+
+        upper_dot = prefix_dot + math.sqrt(rem_sq_a * rem_sq_b)
+        denom = math.sqrt(norm_sq_a) * math.sqrt(norm_sq_b)
+        if denom <= 0.0:
+            return -1.0
+        bound = upper_dot / denom
+        return max(-1.0, min(1.0, float(bound)))
 
     def _is_compatible(self, fragment: MemoryFragment, cluster: MemoryCluster) -> bool:
         if not self.category_strict:

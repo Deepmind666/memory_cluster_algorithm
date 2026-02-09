@@ -33,6 +33,8 @@
   "arb_max_scale": 1.6,
   "enable_dual_merge_guard": false,
   "merge_conflict_compat_threshold": 0.55,
+  "enable_merge_upper_bound_prune": false,
+  "merge_prune_dims": 48,
   "hard_keep_tags": [
     "global_task",
     "current_task"
