@@ -52,6 +52,22 @@ def cmd_build(args: argparse.Namespace) -> int:
         preference.enable_l2_clusters = True
     if args.l2_min_children:
         preference.l2_min_children = max(2, int(args.l2_min_children))
+    if args.enable_conflict_graph:
+        preference.enable_conflict_graph = True
+    if args.enable_adaptive_budget:
+        preference.enable_adaptive_budget = True
+    if args.enable_dual_merge_guard:
+        preference.enable_dual_merge_guard = True
+    if args.merge_conflict_compat_threshold is not None:
+        preference.merge_conflict_compat_threshold = float(args.merge_conflict_compat_threshold)
+    if args.hard_keep_tag:
+        preference.hard_keep_tags = list(dict.fromkeys(preference.hard_keep_tags + list(args.hard_keep_tag)))
+    if args.protect_path_prefix:
+        preference.protected_path_prefixes = list(
+            dict.fromkeys(preference.protected_path_prefixes + list(args.protect_path_prefix))
+        )
+    if args.protect_scope:
+        preference.protected_scopes = list(dict.fromkeys(preference.protected_scopes + list(args.protect_scope)))
 
     result = build_cluster_result(
         fragments=fragments,
@@ -113,6 +129,13 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--strict-conflict-split", action="store_true")
     build.add_argument("--enable-l2-clusters", action="store_true")
     build.add_argument("--l2-min-children", type=int, default=2)
+    build.add_argument("--enable-conflict-graph", action="store_true")
+    build.add_argument("--enable-adaptive-budget", action="store_true")
+    build.add_argument("--enable-dual-merge-guard", action="store_true")
+    build.add_argument("--merge-conflict-compat-threshold", type=float, default=None)
+    build.add_argument("--hard-keep-tag", action="append", default=None)
+    build.add_argument("--protect-path-prefix", action="append", default=None)
+    build.add_argument("--protect-scope", action="append", default=None)
     build.add_argument("--embedding-dim", type=int, default=256)
     build.set_defaults(func=cmd_build)
 

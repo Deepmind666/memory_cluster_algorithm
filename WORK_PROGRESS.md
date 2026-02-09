@@ -523,3 +523,41 @@
   - [x] 语言面向零基础
   - [x] 包含项目逻辑与合理性解释
   - [x] 包含可直接运行命令
+
+## Entry 026
+- Timestamp: 2026-02-10 00:41:34 +08:00
+- Stage: R-009创新实现与消融实验
+- Actions:
+  - 实现CEG冲突证据图(优先级/主导值/切换边)
+  - 实现ARB自适应预算(冲突密度+来源熵+时效)
+  - 实现DMG双通道合并门控并输出阻断统计
+  - 新增消融实验脚本 run_ablation.py 并输出报告
+  - 补17条单测全绿与CLI/benchmark回归
+- Files Reviewed:
+  - `src/memory_cluster/compress.py`
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/preference.py`
+  - `scripts/run_ablation.py`
+  - `tests/`
+- Files Changed:
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/preference.py`
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/compress.py`
+  - `src/memory_cluster/retrieve.py`
+  - `src/memory_cluster/eval.py`
+  - `src/memory_cluster/cli.py`
+  - `scripts/run_ablation.py`
+  - `tests/test_conflict_graph_and_budget.py`
+  - `tests/test_dual_merge_guard.py`
+  - `tests/test_protected_preferences.py`
+  - `docs/eval/ablation_report_cn.md`
+  - `docs/eval/ablation_explained_cn.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+- Review Checklist:
+  - [x] 单元测试17/17通过
+  - [x] ablation脚本可复现
+  - [x] benchmark回归通过
+  - [x] 关键结论有数据支撑

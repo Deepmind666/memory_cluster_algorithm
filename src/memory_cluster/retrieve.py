@@ -11,6 +11,7 @@ _STRENGTH_BONUS = {
     "weak": 0.03,
     "discardable": -0.02,
 }
+_CONFLICT_TOKENS = {"冲突", "矛盾", "conflict", "inconsistent", "disagree"}
 
 
 def _parse_iso(ts: str) -> datetime | None:
@@ -65,7 +66,8 @@ class MemoryRetriever:
             keyword_bonus = self._keyword_bonus(query_text, summary_text)
             strength_bonus = self._strength_bonus(cluster)
             freshness_bonus = self._freshness_bonus(str(cluster.get("last_updated") or ""))
-            score = semantic_score + keyword_bonus + strength_bonus + freshness_bonus
+            conflict_bonus = self._conflict_focus_bonus(query_text, cluster)
+            score = semantic_score + keyword_bonus + strength_bonus + freshness_bonus + conflict_bonus
             scored.append((score, self._sort_timestamp(str(cluster.get("last_updated") or "")), cluster))
 
         scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
@@ -78,6 +80,7 @@ class MemoryRetriever:
                 "score": round(float(score), 6),
                 "summary": cluster.get("summary"),
                 "conflict_count": len(cluster.get("conflicts") or []),
+                "conflict_priority": round(float(self._conflict_priority(cluster)), 6),
                 "backrefs": cluster.get("backrefs") or [],
                 "level": int(cluster.get("level") or 1),
             }
@@ -119,3 +122,29 @@ class MemoryRetriever:
         if dt is None:
             return 0.0
         return float(dt.timestamp())
+
+    def _conflict_priority(self, cluster: dict[str, Any]) -> float:
+        tags = cluster.get("tags") or {}
+        if isinstance(tags, dict) and "conflict_priority" in tags:
+            try:
+                return float(tags.get("conflict_priority") or 0.0)
+            except (TypeError, ValueError):
+                return 0.0
+        priorities: list[float] = []
+        for row in (cluster.get("conflicts") or []):
+            if not isinstance(row, dict):
+                continue
+            try:
+                priorities.append(float(row.get("priority") or 0.0))
+            except (TypeError, ValueError):
+                continue
+        if not priorities:
+            return 0.0
+        return max(priorities)
+
+    def _conflict_focus_bonus(self, query_text: str, cluster: dict[str, Any]) -> float:
+        lowered = query_text.lower()
+        if not any(token in lowered for token in _CONFLICT_TOKENS):
+            return 0.0
+        priority = self._conflict_priority(cluster)
+        return min(0.25, 0.05 * priority)

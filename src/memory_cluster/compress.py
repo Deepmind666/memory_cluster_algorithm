@@ -2,7 +2,7 @@
 
 import re
 from collections import defaultdict
-from typing import Iterable
+from typing import Any, Iterable
 
 from .embed import tokenize
 from .models import ConflictRecord, MemoryCluster, MemoryFragment, utc_now_iso
@@ -84,12 +84,26 @@ class ClusterCompressor:
         decisions: dict[str, PreferenceDecision],
     ) -> MemoryCluster:
         unique_fragments = self._deduplicate(fragments)
+        unique_fragments.sort(key=lambda item: item.timestamp)
         cluster.backrefs = [item.id for item in unique_fragments]
 
         slot_values: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+        slot_events: dict[str, list[dict[str, str]]] = defaultdict(list)
         for fragment in unique_fragments:
             for slot, value in _extract_slot_values(fragment):
                 slot_values[slot][value].append(fragment.id)
+                slot_events[slot].append(
+                    {
+                        "timestamp": fragment.timestamp,
+                        "fragment_id": fragment.id,
+                        "value": value,
+                        "agent_id": fragment.agent_id,
+                    }
+                )
+
+        conflict_graph: dict[str, Any] = {}
+        if policy_engine.enable_conflict_graph():
+            conflict_graph = self._build_conflict_graph(slot_values=slot_values, slot_events=slot_events)
 
         conflicts: list[ConflictRecord] = []
         consensus: dict[str, str] = {}
@@ -100,12 +114,16 @@ class ClusterCompressor:
                 continue
             if policy_engine.should_keep_conflicts():
                 evidences = sorted({frag_id for ids in values.values() for frag_id in ids})
+                graph_meta = conflict_graph.get(slot) if isinstance(conflict_graph, dict) else {}
                 conflicts.append(
                     ConflictRecord(
                         slot=slot,
                         values=sorted(values.keys()),
                         evidences=evidences,
                         last_seen=utc_now_iso(),
+                        priority=float((graph_meta or {}).get("priority") or 0.0),
+                        dominant_value=str((graph_meta or {}).get("dominant_value") or ""),
+                        transition_count=int((graph_meta or {}).get("transition_count") or 0),
                     )
                 )
 
@@ -115,22 +133,34 @@ class ClusterCompressor:
 
         fragment_decisions = [decisions[item.id] for item in unique_fragments if item.id in decisions]
         strength = policy_engine.pick_cluster_strength(fragment_decisions)
-        detail_budget = policy_engine.detail_budget_for_strength(strength)
+        detail_budget = policy_engine.cluster_budget(
+            strength=strength,
+            fragment_decisions=fragment_decisions,
+            conflict_count=len(conflicts),
+            source_distribution=cluster.source_distribution,
+            fragment_count=len(unique_fragments),
+        )
         summary = self._build_summary(
             cluster_id=cluster.cluster_id,
             unique_fragments=unique_fragments,
             consensus=consensus,
             conflicts=conflicts,
+            conflict_graph=conflict_graph,
             split_groups=split_groups,
             strength=strength,
             detail_budget=detail_budget,
+            include_trace_refs=policy_engine.config.enable_adaptive_budget,
         )
 
         cluster.consensus = consensus
         cluster.conflicts = conflicts
+        cluster.conflict_graph = conflict_graph
         cluster.split_groups = split_groups
         cluster.summary = summary
         cluster.tags["retention_strength"] = strength
+        cluster.tags["detail_budget"] = detail_budget
+        cluster.tags["budget_policy"] = "adaptive" if policy_engine.config.enable_adaptive_budget else "static"
+        cluster.tags["conflict_priority"] = round(max((item.priority for item in conflicts), default=0.0), 6)
         if split_groups:
             cluster.tags["split_recommended"] = True
         cluster.last_updated = utc_now_iso()
@@ -190,9 +220,11 @@ class ClusterCompressor:
         unique_fragments: list[MemoryFragment],
         consensus: dict[str, str],
         conflicts: list[ConflictRecord],
+        conflict_graph: dict[str, Any],
         split_groups: list[dict[str, str | list[str]]],
         strength: str,
         detail_budget: int,
+        include_trace_refs: bool,
     ) -> str:
         consensus_count = len(consensus)
         conflict_count = len(conflicts)
@@ -207,8 +239,94 @@ class ClusterCompressor:
             parts.append("conf=0")
         if split_groups:
             parts.append(f"split={len(split_groups)}")
+        if conflict_graph:
+            parts.append(f"ceg={len(conflict_graph)}")
 
         payload = ";".join(parts)
-        if len(payload) <= detail_budget:
+        if len(payload) >= detail_budget:
+            return payload[: max(0, detail_budget - 3)] + "..."
+
+        if not include_trace_refs:
             return payload
-        return payload[: max(0, detail_budget - 3)] + "..."
+
+        # Fill remaining budget with traceable snippets.
+        refs: list[str] = []
+        for fragment in unique_fragments:
+            snippet = (fragment.content or "").replace("\n", " ").strip()
+            if len(snippet) > 28:
+                snippet = snippet[:25] + "..."
+            candidate = payload + ";refs=" + "|".join(refs + [f"{fragment.id}:{snippet}"])
+            if len(candidate) > detail_budget:
+                break
+            refs.append(f"{fragment.id}:{snippet}")
+
+        if refs:
+            return payload + ";refs=" + "|".join(refs)
+        return payload
+
+    def _build_conflict_graph(
+        self,
+        slot_values: dict[str, dict[str, list[str]]],
+        slot_events: dict[str, list[dict[str, str]]],
+    ) -> dict[str, Any]:
+        graph: dict[str, Any] = {}
+        for slot, value_map in slot_values.items():
+            if len(value_map) <= 1:
+                continue
+            events = sorted(slot_events.get(slot) or [], key=lambda row: row.get("timestamp") or "")
+            nodes: list[dict[str, Any]] = []
+            node_lookup: dict[str, dict[str, Any]] = {}
+            for value, evidences in value_map.items():
+                node = {
+                    "value": value,
+                    "evidence_count": len(set(evidences)),
+                    "evidences": sorted(set(evidences)),
+                    "sources": [],
+                    "last_seen": "",
+                }
+                node_lookup[value] = node
+                nodes.append(node)
+
+            edges: list[dict[str, str]] = []
+            previous_value = ""
+            for event in events:
+                value = str(event.get("value") or "")
+                if value not in node_lookup:
+                    continue
+                node = node_lookup[value]
+                agent_id = str(event.get("agent_id") or "")
+                if agent_id and agent_id not in node["sources"]:
+                    node["sources"].append(agent_id)
+                node["last_seen"] = str(event.get("timestamp") or node["last_seen"])
+
+                if previous_value and previous_value != value:
+                    edges.append(
+                        {
+                            "from": previous_value,
+                            "to": value,
+                            "fragment_id": str(event.get("fragment_id") or ""),
+                            "timestamp": str(event.get("timestamp") or ""),
+                            "kind": "switch",
+                        }
+                    )
+                previous_value = value
+
+            dominant_value = ""
+            dominant_count = -1
+            for node in nodes:
+                count = int(node.get("evidence_count") or 0)
+                if count > dominant_count:
+                    dominant_count = count
+                    dominant_value = str(node.get("value") or "")
+
+            transition_count = len(edges)
+            evidence_count = len({e for evidences in value_map.values() for e in evidences})
+            priority = round((len(value_map) * 2.0) + (transition_count * 1.2) + (evidence_count * 0.3), 3)
+            graph[slot] = {
+                "nodes": nodes,
+                "edges": edges,
+                "transition_count": transition_count,
+                "dominant_value": dominant_value,
+                "priority": priority,
+            }
+        return graph

@@ -50,6 +50,9 @@ class ConflictRecord:
     values: list[str]
     evidences: list[str]
     last_seen: str
+    priority: float = 0.0
+    dominant_value: str = ""
+    transition_count: int = 0
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ConflictRecord":
@@ -58,6 +61,9 @@ class ConflictRecord:
             values=[str(v) for v in (data.get("values") or [])],
             evidences=[str(v) for v in (data.get("evidences") or [])],
             last_seen=str(data.get("last_seen") or utc_now_iso()),
+            priority=float(data.get("priority") or 0.0),
+            dominant_value=str(data.get("dominant_value") or ""),
+            transition_count=int(data.get("transition_count") or 0),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -75,6 +81,7 @@ class MemoryCluster:
     tags: dict[str, Any] = field(default_factory=dict)
     consensus: dict[str, Any] = field(default_factory=dict)
     conflicts: list[ConflictRecord] = field(default_factory=list)
+    conflict_graph: dict[str, Any] = field(default_factory=dict)
     split_groups: list[dict[str, Any]] = field(default_factory=list)
     parent_cluster_id: str | None = None
     child_cluster_ids: list[str] = field(default_factory=list)
@@ -98,6 +105,7 @@ class MemoryCluster:
             tags=dict(data.get("tags") or {}),
             consensus=dict(data.get("consensus") or {}),
             conflicts=conflicts,
+            conflict_graph=dict(data.get("conflict_graph") or {}),
             split_groups=list(data.get("split_groups") or []),
             parent_cluster_id=(str(data["parent_cluster_id"]) if data.get("parent_cluster_id") else None),
             child_cluster_ids=[str(x) for x in (data.get("child_cluster_ids") or [])],
@@ -131,6 +139,18 @@ class PreferenceConfig:
     semantic_dedup_threshold: float = 0.88
     enable_l2_clusters: bool = False
     l2_min_children: int = 2
+    enable_conflict_graph: bool = False
+    enable_adaptive_budget: bool = False
+    arb_conflict_weight: float = 0.45
+    arb_entropy_weight: float = 0.25
+    arb_stale_penalty: float = 0.35
+    arb_min_scale: float = 0.7
+    arb_max_scale: float = 1.6
+    enable_dual_merge_guard: bool = False
+    merge_conflict_compat_threshold: float = 0.55
+    hard_keep_tags: list[str] = field(default_factory=list)
+    protected_path_prefixes: list[str] = field(default_factory=list)
+    protected_scopes: list[str] = field(default_factory=lambda: ["global_task", "current_task"])
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PreferenceConfig":
@@ -146,6 +166,18 @@ class PreferenceConfig:
             semantic_dedup_threshold=float(data.get("semantic_dedup_threshold", 0.88)),
             enable_l2_clusters=bool(data.get("enable_l2_clusters", False)),
             l2_min_children=max(2, int(data.get("l2_min_children", 2))),
+            enable_conflict_graph=bool(data.get("enable_conflict_graph", False)),
+            enable_adaptive_budget=bool(data.get("enable_adaptive_budget", False)),
+            arb_conflict_weight=float(data.get("arb_conflict_weight", 0.45)),
+            arb_entropy_weight=float(data.get("arb_entropy_weight", 0.25)),
+            arb_stale_penalty=float(data.get("arb_stale_penalty", 0.35)),
+            arb_min_scale=float(data.get("arb_min_scale", 0.7)),
+            arb_max_scale=float(data.get("arb_max_scale", 1.6)),
+            enable_dual_merge_guard=bool(data.get("enable_dual_merge_guard", False)),
+            merge_conflict_compat_threshold=float(data.get("merge_conflict_compat_threshold", 0.55)),
+            hard_keep_tags=[str(x) for x in (data.get("hard_keep_tags") or [])],
+            protected_path_prefixes=[str(x) for x in (data.get("protected_path_prefixes") or [])],
+            protected_scopes=[str(x) for x in (data.get("protected_scopes") or ["global_task", "current_task"])],
         )
 
     def to_dict(self) -> dict[str, Any]:

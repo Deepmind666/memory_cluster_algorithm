@@ -166,27 +166,29 @@ def build_cluster_result(
     embedding_dim: int = 256,
 ) -> ClusterBuildResult:
     rows = sorted(list(fragments), key=lambda item: item.timestamp)
+    pref = preference_config or PreferenceConfig()
     provider = HashEmbeddingProvider(dim=embedding_dim)
     clusterer = IncrementalClusterer(
         similarity_threshold=similarity_threshold,
         merge_threshold=merge_threshold,
         category_strict=category_strict,
+        enable_dual_merge_guard=pref.enable_dual_merge_guard,
+        merge_conflict_compat_threshold=pref.merge_conflict_compat_threshold,
     )
 
     clusters: list[MemoryCluster] = []
     embedding_by_id: dict[str, list[float]] = {}
+    by_id = {fragment.id: fragment for fragment in rows}
     for fragment in rows:
         vector = provider.embed(fragment.content)
         embedding_by_id[fragment.id] = vector
         clusterer.assign(fragment=fragment, embedding=vector, clusters=clusters)
 
-    clusters = clusterer.merge_clusters(clusters)
+    clusters = clusterer.merge_clusters_with_lookup(clusters=clusters, fragment_lookup=by_id)
 
-    pref = preference_config or PreferenceConfig()
     policy_engine = PreferencePolicyEngine(pref)
     decisions = {fragment.id: policy_engine.decide_for_fragment(fragment) for fragment in rows}
 
-    by_id = {fragment.id: fragment for fragment in rows}
     compressor = ClusterCompressor(
         semantic_dedup_threshold=pref.semantic_dedup_threshold,
         strict_conflict_split=pref.strict_conflict_split or policy_engine.strict_conflict_split(),
@@ -214,4 +216,5 @@ def build_cluster_result(
         clusters.extend(_build_l2_clusters(clusters=clusters, min_children=pref.l2_min_children))
 
     metrics = compute_metrics(rows, clusters)
+    metrics.update(clusterer.snapshot_stats())
     return ClusterBuildResult(fragments=rows, clusters=clusters, metrics=metrics)

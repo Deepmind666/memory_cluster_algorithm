@@ -30,6 +30,18 @@ def compute_metrics(fragments: list[MemoryFragment], clusters: list[MemoryCluste
         len(item.backrefs) for item in clusters
     )
     total_backrefs_all = sum(len(item.backrefs) for item in clusters)
+    conflict_priorities = [
+        float(item.tags.get("conflict_priority") or 0.0)
+        for item in (l1_clusters if l1_clusters else clusters)
+        if isinstance(item.tags, dict)
+    ]
+    detail_budgets = [
+        int(item.tags.get("detail_budget") or 0)
+        for item in (l1_clusters if l1_clusters else clusters)
+        if isinstance(item.tags, dict) and item.tags.get("detail_budget") is not None
+    ]
+    conflict_priority_avg = (sum(conflict_priorities) / len(conflict_priorities)) if conflict_priorities else 0.0
+    detail_budget_avg = (sum(detail_budgets) / len(detail_budgets)) if detail_budgets else 0.0
 
     type_distribution = Counter(item.type for item in fragments)
     source_distribution = Counter(item.agent_id for item in fragments)
@@ -53,8 +65,10 @@ def compute_metrics(fragments: list[MemoryFragment], clusters: list[MemoryCluste
         "avg_cluster_size": round(avg_cluster_size, 6),
         "conflict_count": conflicts,
         "conflict_cluster_rate": round(conflict_cluster_rate, 6),
+        "conflict_priority_avg": round(conflict_priority_avg, 6),
         "backref_count": total_backrefs,
         "backref_count_all": total_backrefs_all,
+        "detail_budget_avg": round(detail_budget_avg, 3),
         "fragment_type_distribution": dict(type_distribution),
         "source_distribution": dict(source_distribution),
     }

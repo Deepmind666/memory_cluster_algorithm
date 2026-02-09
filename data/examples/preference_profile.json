@@ -23,5 +23,26 @@
   "source_demote_threshold": 0.8,
   "semantic_dedup_threshold": 0.88,
   "enable_l2_clusters": false,
-  "l2_min_children": 2
+  "l2_min_children": 2,
+  "enable_conflict_graph": false,
+  "enable_adaptive_budget": false,
+  "arb_conflict_weight": 0.45,
+  "arb_entropy_weight": 0.25,
+  "arb_stale_penalty": 0.35,
+  "arb_min_scale": 0.7,
+  "arb_max_scale": 1.6,
+  "enable_dual_merge_guard": false,
+  "merge_conflict_compat_threshold": 0.55,
+  "hard_keep_tags": [
+    "global_task",
+    "current_task"
+  ],
+  "protected_path_prefixes": [
+    "src/",
+    "docs/patent_kit/"
+  ],
+  "protected_scopes": [
+    "global_task",
+    "current_task"
+  ]
 }

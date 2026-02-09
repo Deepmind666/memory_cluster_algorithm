@@ -22,12 +22,19 @@ class IncrementalClusterer:
         similarity_threshold: float = 0.72,
         merge_threshold: float = 0.9,
         category_strict: bool = False,
+        enable_dual_merge_guard: bool = False,
+        merge_conflict_compat_threshold: float = 0.55,
     ) -> None:
         self.similarity_threshold = similarity_threshold
         self.merge_threshold = merge_threshold
         self.category_strict = category_strict
+        self.enable_dual_merge_guard = enable_dual_merge_guard
+        self.merge_conflict_compat_threshold = merge_conflict_compat_threshold
         self._counter = 0
         self._id_pattern = re.compile(r"^cluster-(\d+)$")
+        self.merge_attempts = 0
+        self.merges_applied = 0
+        self.merges_blocked_by_guard = 0
 
     def assign(
         self,
@@ -57,6 +64,13 @@ class IncrementalClusterer:
         return ClusterAssignment(new_cluster.cluster_id, 1.0, created_new=True)
 
     def merge_clusters(self, clusters: list[MemoryCluster]) -> list[MemoryCluster]:
+        return self.merge_clusters_with_lookup(clusters=clusters, fragment_lookup=None)
+
+    def merge_clusters_with_lookup(
+        self,
+        clusters: list[MemoryCluster],
+        fragment_lookup: dict[str, MemoryFragment] | None,
+    ) -> list[MemoryCluster]:
         if len(clusters) < 2:
             return clusters
 
@@ -74,10 +88,17 @@ class IncrementalClusterer:
                         continue
                     if not self._cluster_tags_compatible(base, other):
                         continue
+                    self.merge_attempts += 1
                     score = cosine_similarity(base.centroid, other.centroid)
                     if score < self.merge_threshold:
                         continue
+                    if self.enable_dual_merge_guard and fragment_lookup:
+                        compat = self._conflict_compatibility(base, other, fragment_lookup)
+                        if compat < self.merge_conflict_compat_threshold:
+                            self.merges_blocked_by_guard += 1
+                            continue
                     self._merge_pair(base, other)
+                    self.merges_applied += 1
                     active[j] = None
                     merged = True
             active = [item for item in active if item is not None]
@@ -141,6 +162,13 @@ class IncrementalClusterer:
         base.last_updated = utc_now_iso()
         base.version += 1
 
+    def snapshot_stats(self) -> dict[str, int]:
+        return {
+            "merge_attempts": int(self.merge_attempts),
+            "merges_applied": int(self.merges_applied),
+            "merges_blocked_by_guard": int(self.merges_blocked_by_guard),
+        }
+
     def _is_compatible(self, fragment: MemoryFragment, cluster: MemoryCluster) -> bool:
         if not self.category_strict:
             return True
@@ -158,3 +186,63 @@ class IncrementalClusterer:
         if category_a and category_b and category_a != category_b:
             return False
         return True
+
+    def _extract_slots(self, fragment: MemoryFragment) -> dict[str, set[str]]:
+        output: dict[str, set[str]] = {}
+        slots = fragment.meta.get("slots")
+        if isinstance(slots, dict):
+            for slot, value in slots.items():
+                key = str(slot)
+                output.setdefault(key, set()).add(str(value))
+        flags = fragment.meta.get("flags")
+        if isinstance(flags, dict):
+            for key, value in flags.items():
+                slot = f"flag:{str(key).strip().lower()}"
+                output.setdefault(slot, set()).add("true" if bool(value) else "false")
+        return output
+
+    def _slot_profile(
+        self,
+        cluster: MemoryCluster,
+        fragment_lookup: dict[str, MemoryFragment],
+    ) -> dict[str, set[str]]:
+        profile: dict[str, set[str]] = {}
+        for fid in cluster.fragment_ids:
+            fragment = fragment_lookup.get(fid)
+            if fragment is None:
+                continue
+            slots = self._extract_slots(fragment)
+            for slot, values in slots.items():
+                profile.setdefault(slot, set()).update(values)
+        return profile
+
+    def _conflict_compatibility(
+        self,
+        cluster_a: MemoryCluster,
+        cluster_b: MemoryCluster,
+        fragment_lookup: dict[str, MemoryFragment],
+    ) -> float:
+        profile_a = self._slot_profile(cluster_a, fragment_lookup)
+        profile_b = self._slot_profile(cluster_b, fragment_lookup)
+        overlap = sorted(set(profile_a.keys()).intersection(profile_b.keys()))
+        if not overlap:
+            return 1.0
+
+        scores: list[float] = []
+        for slot in overlap:
+            set_a = profile_a.get(slot) or set()
+            set_b = profile_b.get(slot) or set()
+            if not set_a or not set_b:
+                continue
+            inter = len(set_a.intersection(set_b))
+            union = len(set_a.union(set_b))
+            if union == 0:
+                continue
+            score = inter / float(union)
+            if score == 0.0:
+                return 0.0
+            scores.append(score)
+
+        if not scores:
+            return 1.0
+        return sum(scores) / float(len(scores))
