@@ -40,16 +40,23 @@ class MemoryRetriever:
         query_text: str,
         top_k: int = 5,
         offset: int = 0,
+        cluster_level: str = "all",
         expand: bool = False,
     ) -> list[dict[str, Any]]:
         query_vec = self.embedding_provider.embed(query_text)
         clusters = state.get("clusters") or []
         fragments = state.get("fragments") or []
         fragment_map = {item.get("id"): item for item in fragments if isinstance(item, dict)}
+        level_filter = (cluster_level or "all").lower()
 
         scored: list[tuple[float, dict[str, Any]]] = []
         for cluster in clusters:
             if not isinstance(cluster, dict):
+                continue
+            level = int(cluster.get("level") or 1)
+            if level_filter == "l1" and level != 1:
+                continue
+            if level_filter == "l2" and level < 2:
                 continue
             centroid = [float(x) for x in (cluster.get("centroid") or [])]
             summary_text = str(cluster.get("summary") or "")
@@ -72,6 +79,7 @@ class MemoryRetriever:
                 "summary": cluster.get("summary"),
                 "conflict_count": len(cluster.get("conflicts") or []),
                 "backrefs": cluster.get("backrefs") or [],
+                "level": int(cluster.get("level") or 1),
             }
             if expand:
                 record["fragments"] = [fragment_map.get(fid) for fid in record["backrefs"] if fid in fragment_map]

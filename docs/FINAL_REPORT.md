@@ -2,109 +2,64 @@
 
 最后更新：2026-02-09
 
-## 1. 完成状态
-- [x] 仓库骨架与规则文件（AGENTS.md + Skill）
-- [x] `src/memory_cluster` 原型实现
-- [x] 示例数据 + 偏好配置
-- [x] 4 个核心测试
-- [x] prior-art 对比与 design-around
-- [x] 专利交底材料 00-08 草案
-- [x] 端到端 demo 与 benchmark 实跑
+## 1. 当前完成状态
+- [x] 多 Agent 记忆碎片采集与 JSONL 持久化
+- [x] 本地零依赖语义向量化（HashEmbeddingProvider）
+- [x] 增量聚类与簇合并
+- [x] 簇内去重、冲突显式标记、严格冲突分裂
+- [x] 偏好策略（类别/来源/时效/预算）
+- [x] 检索分页（offset）与排序增强（语义+关键词+强度+新鲜度）
+- [x] L2 层次主题簇（可开关）
+- [x] 端到端 CLI、benchmark、专利材料草案
 
-## 2. 快速运行命令
+## 2. 核心命令
 ```powershell
 python -m src.memory_cluster.cli ingest --input data/examples/multi_agent_memory_fragments.jsonl --store outputs/memory_store.jsonl
 python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85
-python -m src.memory_cluster.cli query --state outputs/cluster_state.json --query "alpha 冲突参数" --top-k 3 --expand
+python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_l2.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-l2-clusters --l2-min-children 2
+python -m src.memory_cluster.cli query --state outputs/cluster_state.json --query "alpha 冲突参数" --top-k 3 --offset 0 --expand
 python -m src.memory_cluster.cli eval --state outputs/cluster_state.json --output outputs/perf_metrics.json
-python scripts/run_benchmark.py --input data/examples/multi_agent_memory_fragments.jsonl --preferences data/examples/preference_profile.json --output outputs/benchmark.json --runs 5 --similarity-threshold 0.4 --merge-threshold 0.85
+python scripts/run_benchmark.py --input data/examples/multi_agent_memory_fragments.jsonl --preferences data/examples/preference_profile.json --output outputs/benchmark_latest.json --runs 5
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-## 3. 实跑结果节选
+## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：4/4 通过
+- 结果：12/12 通过
 
-### 3.2 聚类构建指标
+### 3.2 Benchmark（L2 关闭，runs=5）
+- `avg_ms`: 2.643
+- `p95_ms`: 2.928
 - `fragment_count`: 12
-- `cluster_count`: 9
-- `compression_ratio`: 0.767584
-- `dedup_reduction`: 0.166667
-- `conflict_count`: 1
-- `conflict_cluster_rate`: 0.111111
+- `cluster_count`: 10
+- `l1_cluster_count`: 10
+- `l2_cluster_count`: 0
+- `compression_ratio`: 1.299694
 
-### 3.3 查询示例
-查询 `alpha 冲突参数` 返回的 Top1：
-- `cluster_id`: `cluster-0003`
-- `summary`: `n=2;s=strong;cons=0;conf=alpha:0.2/0.7`
-- `backrefs`: `f004,f005`（可展开原始证据）
+### 3.3 Build（L2 开启）
+- `fragment_count`: 12
+- `cluster_count`: 13
+- `l1_cluster_count`: 10
+- `l2_cluster_count`: 3
+- `compressed_chars`: 431
+- `compressed_chars_all`: 615
+- `backref_count`: 10
+- `backref_count_all`: 20
 
-### 3.4 基准结果（5 次）
-- `avg_ms`: 2.119
-- `p95_ms`: 2.284
+## 4. 交付资产
+- 代码：`src/memory_cluster/`
+- 测试：`tests/`（当前 11 个）
+- 数据：`data/examples/`
+- 规格：`docs/design/algorithm_spec.md`, `docs/design/algorithm_spec_detailed.md`
+- 风险与绕开：`docs/prior_art/`
+- 专利草案：`docs/patent_kit/`
+- 进展日志：`WORK_PROGRESS.md`
 
-## 4. 交付文件清单
-### 4.1 代码
-- `src/memory_cluster/models.py`
-- `src/memory_cluster/embed.py`
-- `src/memory_cluster/cluster.py`
-- `src/memory_cluster/compress.py`
-- `src/memory_cluster/preference.py`
-- `src/memory_cluster/store.py`
-- `src/memory_cluster/retrieve.py`
-- `src/memory_cluster/eval.py`
-- `src/memory_cluster/pipeline.py`
-- `src/memory_cluster/cli.py`
-
-### 4.2 测试与数据
-- `tests/test_clustering_basic.py`
-- `tests/test_conflict_marking.py`
-- `tests/test_preference_policy.py`
-- `tests/test_store_roundtrip.py`
-- `data/examples/multi_agent_memory_fragments.jsonl`
-- `data/examples/preference_profile.json`
-
-### 4.3 文档
-- `docs/design/algorithm_spec.md`
-- `docs/prior_art/search_log.md`
-- `docs/prior_art/feature_matrix.md`
-- `docs/prior_art/design_around.md`
-- `docs/patent_kit/00_技术交底书_总览.md`
-- `docs/patent_kit/01_背景技术.md`
-- `docs/patent_kit/02_发明内容_技术问题与效果.md`
-- `docs/patent_kit/03_技术方案_系统与流程.md`
-- `docs/patent_kit/04_附图说明.md`
-- `docs/patent_kit/05_具体实施方式.md`
-- `docs/patent_kit/06_权利要求书_草案.md`
-- `docs/patent_kit/07_摘要.md`
-- `docs/patent_kit/08_对比文件与绕开说明.md`
-- `docs/eval/demo_walkthrough.md`
-
-### 4.4 工具
-- `scripts/run_benchmark.py`
-- `.codex/skills/memory-cluster-patent-kit/SKILL.md`
-- `AGENTS.md`
-
-## 5. 撞车风险雷达（Top 5）
-1. 语义聚类本身（高）
-- 风险：与既有语料聚类专利重合。
-- 绕开：聚类对象限定为多 Agent 异构碎片，并绑定冲突与回溯机制。
-
-2. 偏好驱动摘要（高）
-- 风险：与可控摘要专利重合。
-- 绕开：偏好作用于写入/合并/降级/检索全链路，而非仅摘要风格。
-
-3. 共享向量记忆（高）
-- 风险：跨代理访问向量记忆已有披露。
-- 绕开：强调共享写入后的治理算法（去重+冲突显式+可逆索引）。
-
-4. 单会话滚动摘要（中-高）
-- 风险：与窗口+摘要机制概念接近。
-- 绕开：加入跨 Agent 一致性治理与冲突分裂策略。
-
-5. 分层记忆管理（中）
-- 风险：分层压缩/迁移已有公开。
-- 绕开：将层次化仅作为从属，独立项聚焦耦合闭环与可度量技术效果。
+## 5. 当前主要风险
+1. 大规模性能风险：`cluster.py` 仍为 O(k^2) 合并策略，簇数上升时会放大开销。
+2. 冲突语义风险：当前否定冲突识别以规则为主，复杂语义和反事实覆盖不足。
+3. 检索解释风险：排序权重为启发式，需进一步通过任务指标校准。
 
 ## 6. 非法律声明
-本报告仅为技术实现与专利草案准备材料，不构成法律意见。正式申请前应由专利代理人进行完整检索与法律审查。
+本报告仅用于工程实现与专利草案准备，不构成法律意见。正式申请前应由专利代理人进行完整检索与法律审查。

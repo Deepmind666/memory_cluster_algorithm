@@ -48,6 +48,10 @@ def cmd_build(args: argparse.Namespace) -> int:
         preference = PreferenceConfig.from_dict(_load_json(args.preferences))
     if args.strict_conflict_split:
         preference.strict_conflict_split = True
+    if args.enable_l2_clusters:
+        preference.enable_l2_clusters = True
+    if args.l2_min_children:
+        preference.l2_min_children = max(2, int(args.l2_min_children))
 
     result = build_cluster_result(
         fragments=fragments,
@@ -70,6 +74,7 @@ def cmd_query(args: argparse.Namespace) -> int:
         query_text=args.query,
         top_k=args.top_k,
         offset=args.offset,
+        cluster_level=args.cluster_level,
         expand=args.expand,
     )
     print(json.dumps({"status": "ok", "results": results}, ensure_ascii=False, indent=2))
@@ -106,6 +111,8 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--merge-threshold", type=float, default=0.9)
     build.add_argument("--category-strict", action="store_true")
     build.add_argument("--strict-conflict-split", action="store_true")
+    build.add_argument("--enable-l2-clusters", action="store_true")
+    build.add_argument("--l2-min-children", type=int, default=2)
     build.add_argument("--embedding-dim", type=int, default=256)
     build.set_defaults(func=cmd_build)
 
@@ -114,6 +121,7 @@ def build_parser() -> argparse.ArgumentParser:
     query.add_argument("--query", required=True)
     query.add_argument("--top-k", type=int, default=5)
     query.add_argument("--offset", type=int, default=0)
+    query.add_argument("--cluster-level", choices=("all", "l1", "l2"), default="all")
     query.add_argument("--expand", action="store_true")
     query.add_argument("--embedding-dim", type=int, default=256)
     query.set_defaults(func=cmd_query)

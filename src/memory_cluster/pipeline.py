@@ -1,6 +1,6 @@
 ﻿from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Iterable
 
 from .cluster import IncrementalClusterer
@@ -14,6 +14,94 @@ from .preference import PreferencePolicyEngine
 def _build_source_distribution(fragments: list[MemoryFragment]) -> dict[str, int]:
     counter = Counter(item.agent_id for item in fragments)
     return dict(counter)
+
+
+def _merge_source_distribution(clusters: list[MemoryCluster]) -> dict[str, int]:
+    merged: dict[str, int] = {}
+    for cluster in clusters:
+        for source, count in cluster.source_distribution.items():
+            merged[source] = merged.get(source, 0) + int(count)
+    return merged
+
+
+def _centroid_average(vectors: list[list[float]]) -> list[float]:
+    valid = [vec for vec in vectors if vec]
+    if not valid:
+        return []
+    dim = len(valid[0])
+    aligned = [vec for vec in valid if len(vec) == dim]
+    if not aligned:
+        return []
+    return [sum(vec[i] for vec in aligned) / len(aligned) for i in range(dim)]
+
+
+def _pick_parent_strength(clusters: list[MemoryCluster]) -> str:
+    order = {"discardable": 0, "weak": 1, "strong": 2}
+    best = "weak"
+    best_score = -1
+    for cluster in clusters:
+        strength = str(cluster.tags.get("retention_strength") or "weak").lower()
+        score = order.get(strength, 1)
+        if score > best_score:
+            best_score = score
+            best = strength
+    return best
+
+
+def _build_l2_clusters(clusters: list[MemoryCluster], min_children: int = 2) -> list[MemoryCluster]:
+    grouped: dict[str, list[MemoryCluster]] = defaultdict(list)
+    for cluster in clusters:
+        if cluster.level != 1:
+            continue
+        key = str(cluster.tags.get("category") or "uncategorized")
+        grouped[key].append(cluster)
+
+    output: list[MemoryCluster] = []
+    counter = 0
+    for category, members in sorted(grouped.items(), key=lambda item: item[0]):
+        if len(members) < max(2, int(min_children)):
+            continue
+
+        counter += 1
+        topic_id = f"topic-{counter:04d}"
+        child_ids = sorted(cluster.cluster_id for cluster in members)
+        fragment_ids = sorted({fid for cluster in members for fid in cluster.fragment_ids})
+        centroid = _centroid_average([cluster.centroid for cluster in members])
+        source_distribution = _merge_source_distribution(members)
+        consensus: dict[str, str] = {}
+        if members:
+            seed = members[0].consensus
+            for slot, value in seed.items():
+                if all(cluster.consensus.get(slot) == value for cluster in members):
+                    consensus[slot] = value
+
+        parent_strength = _pick_parent_strength(members)
+        l2 = MemoryCluster(
+            cluster_id=topic_id,
+            centroid=centroid,
+            fragment_ids=fragment_ids,
+            source_distribution=source_distribution,
+            tags={
+                "category": category,
+                "retention_strength": parent_strength,
+                "cluster_level": "L2",
+                "child_cluster_count": len(child_ids),
+            },
+            consensus=consensus,
+            child_cluster_ids=child_ids,
+            level=2,
+            summary=(
+                f"id={topic_id};level=L2;cat={category};children={len(child_ids)};"
+                f"frags={len(fragment_ids)};cons={len(consensus)}"
+            ),
+            backrefs=fragment_ids,
+            last_updated=utc_now_iso(),
+        )
+        output.append(l2)
+        for child in members:
+            child.parent_cluster_id = topic_id
+
+    return output
 
 
 def _split_conflicted_clusters(
@@ -57,6 +145,7 @@ def _split_conflicted_clusters(
                 },
                 backrefs=[member.id for member in members],
                 last_updated=utc_now_iso(),
+                level=1,
             )
             compressor.compress(
                 cluster=child,
@@ -120,6 +209,9 @@ def build_cluster_result(
             policy_engine=policy_engine,
             decisions=decisions,
         )
+
+    if pref.enable_l2_clusters:
+        clusters.extend(_build_l2_clusters(clusters=clusters, min_children=pref.l2_min_children))
 
     metrics = compute_metrics(rows, clusters)
     return ClusterBuildResult(fragments=rows, clusters=clusters, metrics=metrics)

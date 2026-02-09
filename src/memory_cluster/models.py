@@ -76,6 +76,9 @@ class MemoryCluster:
     consensus: dict[str, Any] = field(default_factory=dict)
     conflicts: list[ConflictRecord] = field(default_factory=list)
     split_groups: list[dict[str, Any]] = field(default_factory=list)
+    parent_cluster_id: str | None = None
+    child_cluster_ids: list[str] = field(default_factory=list)
+    level: int = 1
     summary: str = ""
     backrefs: list[str] = field(default_factory=list)
     last_updated: str = field(default_factory=utc_now_iso)
@@ -96,6 +99,9 @@ class MemoryCluster:
             consensus=dict(data.get("consensus") or {}),
             conflicts=conflicts,
             split_groups=list(data.get("split_groups") or []),
+            parent_cluster_id=(str(data["parent_cluster_id"]) if data.get("parent_cluster_id") else None),
+            child_cluster_ids=[str(x) for x in (data.get("child_cluster_ids") or [])],
+            level=int(data.get("level") or 1),
             summary=str(data.get("summary") or ""),
             backrefs=[str(x) for x in (data.get("backrefs") or [])],
             last_updated=str(data.get("last_updated") or utc_now_iso()),
@@ -123,6 +129,8 @@ class PreferenceConfig:
     source_promote_threshold: float = 1.5
     source_demote_threshold: float = 0.8
     semantic_dedup_threshold: float = 0.88
+    enable_l2_clusters: bool = False
+    l2_min_children: int = 2
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PreferenceConfig":
@@ -136,6 +144,8 @@ class PreferenceConfig:
             source_promote_threshold=float(data.get("source_promote_threshold", 1.5)),
             source_demote_threshold=float(data.get("source_demote_threshold", 0.8)),
             semantic_dedup_threshold=float(data.get("semantic_dedup_threshold", 0.88)),
+            enable_l2_clusters=bool(data.get("enable_l2_clusters", False)),
+            l2_min_children=max(2, int(data.get("l2_min_children", 2))),
         )
 
     def to_dict(self) -> dict[str, Any]:

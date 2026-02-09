@@ -64,15 +64,18 @@
 - [x] 语义近重复去重（Jaccard）
 - [x] 否定冲突识别（flag:true/false）
 - [x] 严格冲突分裂（split groups / child clusters）
-- [ ] 二级主题层次压缩（L2 clusters）
-- [ ] 检索分页与排序策略增强
+- [x] 二级主题层次压缩（L2 clusters）
+- [x] 检索分页与排序策略增强
 - [ ] 大规模簇下的近似检索优化（替代 O(n^2) 合并）
 
 ## 8. 运行命令
 ```powershell
 python -m src.memory_cluster.cli ingest --input data/examples/multi_agent_memory_fragments.jsonl --store outputs/memory_store.jsonl
 python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85
+python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_l2.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --enable-l2-clusters --l2-min-children 2
 python -m src.memory_cluster.cli query --state outputs/cluster_state.json --query "alpha 冲突参数" --top-k 3 --expand
+python -m src.memory_cluster.cli query --state outputs/cluster_state.json --query "alpha 冲突参数" --top-k 3 --offset 1 --expand
+python -m src.memory_cluster.cli query --state outputs/cluster_state_l2.json --query "method topic" --top-k 3 --cluster-level l2 --expand
 python -m src.memory_cluster.cli eval --state outputs/cluster_state.json --output outputs/perf_metrics.json
 python scripts/run_benchmark.py --input data/examples/multi_agent_memory_fragments.jsonl --preferences data/examples/preference_profile.json --output outputs/benchmark.json --runs 5 --similarity-threshold 0.4 --merge-threshold 0.85
 python -m unittest discover -s tests -p "test_*.py" -v

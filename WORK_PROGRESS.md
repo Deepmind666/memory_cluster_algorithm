@@ -398,3 +398,37 @@
   - [x] 远端main包含最新提交
   - [x] 本地main与origin/main一致
   - [x] 凭证未写入仓库文件
+
+## Entry 020
+- Timestamp: 2026-02-09 23:49:20 +08:00
+- Stage: R-005阶段推进：L2层次压缩与计划收敛
+- Actions:
+  - 完成L2层次簇实现(Parent/Child/Level)并开放CLI开关
+  - 修正评测口径为L1主指标+all辅助指标
+  - 新增检索层级过滤(all/l1/l2)与测试
+  - 输出下一阶段计划评估文档 next_phase_plan.md 并同步README/主任务文档
+- Files Reviewed:
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/eval.py`
+  - `src/memory_cluster/retrieve.py`
+  - `tests/test_retrieve_ordering.py`
+  - `docs/FINAL_REPORT.md`
+- Files Changed:
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/eval.py`
+  - `src/memory_cluster/retrieve.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_l2_hierarchy.py`
+  - `tests/test_retrieve_ordering.py`
+  - `data/examples/preference_profile.json`
+  - `docs/design/next_phase_plan.md`
+  - `docs/FINAL_REPORT.md`
+  - `README.md`
+  - `gptdeepsearch2_9.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 单元测试 12/12 通过
+  - [x] L2 build 命令可复现
+  - [x] 查询层级过滤(l1/l2)可用
+  - [x] benchmark与compileall通过
