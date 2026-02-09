@@ -1,0 +1,20 @@
+﻿# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs and temp
+*.log
+*.tmp
+*.bak
+
+# Tool output
+outputs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local assistant settings
+.claude/
