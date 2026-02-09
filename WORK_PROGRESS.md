@@ -502,3 +502,24 @@
   - [x] 计划包含技术问题-手段-效果闭环
   - [x] 计划包含可执行时间表
   - [x] 计划包含可落地代码文件映射
+
+## Entry 025
+- Timestamp: 2026-02-10 00:12:41 +08:00
+- Stage: R-008初学者人话说明
+- Actions:
+  - 新增初学者人话版说明文档
+  - 将项目术语改写为生活化比喻并提供最短学习路径
+  - 在README新增新手入口
+- Files Reviewed:
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/compress.py`
+  - `src/memory_cluster/retrieve.py`
+  - `README.md`
+- Files Changed:
+  - `docs/design/beginner_plain_guide.md`
+  - `README.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 语言面向零基础
+  - [x] 包含项目逻辑与合理性解释
+  - [x] 包含可直接运行命令

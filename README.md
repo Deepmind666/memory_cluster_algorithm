@@ -29,6 +29,9 @@ python -m pip install -r requirements.txt
 - `docs/patent_kit/`：专利交底草案包。
 - `docs/FINAL_REPORT.md`：端到端结果总报告。
 
+## 新手入口
+- `docs/design/beginner_plain_guide.md`：初学者“人话版”思路说明。
+
 ## 快速运行
 ```powershell
 python -m src.memory_cluster.cli ingest --input data/examples/multi_agent_memory_fragments.jsonl --store outputs/memory_store.jsonl
