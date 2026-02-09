@@ -49,7 +49,8 @@ class PreferencePolicyEngine:
         strength = self.config.category_strength.get(category, "weak")
         reasons = [f"category={category}:{strength}"]
 
-        if self._is_protected_fragment(fragment):
+        protected = self._is_protected_fragment(fragment)
+        if protected:
             if strength != "strong":
                 strength = "strong"
                 reasons.append("protected fragment forces strong retention")
@@ -57,20 +58,27 @@ class PreferencePolicyEngine:
                 reasons.append("protected fragment keeps strong retention")
 
         source_weight = float(self.config.source_weight.get(fragment.agent_id, 1.0))
-        if source_weight >= self.config.source_promote_threshold and strength == "weak":
-            strength = "strong"
-            reasons.append("source_weight promotes weak->strong")
-        elif source_weight < self.config.source_demote_threshold and strength == "strong":
-            strength = "weak"
-            reasons.append("source_weight demotes strong->weak")
-
         stale = self._is_stale(fragment.timestamp)
-        if stale and strength == "strong":
-            strength = "weak"
-            reasons.append("staleness demotes strong->weak")
-        elif stale and strength == "weak":
-            strength = "discardable"
-            reasons.append("staleness demotes weak->discardable")
+
+        if protected:
+            if source_weight < self.config.source_demote_threshold and strength == "strong":
+                reasons.append("protected fragment blocks source demotion")
+            if stale:
+                reasons.append("protected fragment blocks staleness demotion")
+        else:
+            if source_weight >= self.config.source_promote_threshold and strength == "weak":
+                strength = "strong"
+                reasons.append("source_weight promotes weak->strong")
+            elif source_weight < self.config.source_demote_threshold and strength == "strong":
+                strength = "weak"
+                reasons.append("source_weight demotes strong->weak")
+
+            if stale and strength == "strong":
+                strength = "weak"
+                reasons.append("staleness demotes strong->weak")
+            elif stale and strength == "weak":
+                strength = "discardable"
+                reasons.append("staleness demotes weak->discardable")
 
         detail_budget = int(self.config.detail_budget.get(strength, 350))
         return PreferenceDecision(

@@ -524,6 +524,46 @@
   - [x] 包含项目逻辑与合理性解释
   - [x] 包含可直接运行命令
 
+## Entry R-004-Review (Claude Opus)
+- Timestamp: 2026-02-10 14:30:00 +08:00
+- Stage: R-004 全量深度评审（by Claude Opus 4.6）
+- Actions:
+  - 逐行审读全部 13 个源码模块
+  - 审读全部 8 个测试文件（12 个方法）
+  - 运行 12/12 单元测试 — 全部通过
+  - 执行 CLI 端到端验证（ingest→build→query）— 通过
+  - 发现 Windows 控制台 GBK 编码导致中文输出乱码（数据本身正确）
+  - 验证 R-003 的 12 项问题闭环状态：8 项已修复/标注，4 项降级遗留
+  - 审读 3 份新增文档（beginner_plain_guide / cn_fast_track_patent_plan / review_response_r003）
+  - 核对 WORK_PROGRESS Entry 018-025
+  - 新发现 5 个 P2 问题 + 3 个 P3 问题
+- Files Reviewed:
+  - `src/memory_cluster/*.py`（全部 13 个）
+  - `tests/test_*.py`（全部 8 个）
+  - `docs/design/beginner_plain_guide.md`
+  - `docs/design/cn_fast_track_patent_plan.md`
+  - `docs/review_response_r003.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/REVIEW_CHECKLIST.md`
+  - `README.md`
+  - `gptdeepsearch2_9.md`
+  - `AGENTS.md`
+  - `WORK_PROGRESS.md`
+  - `data/examples/multi_agent_memory_fragments.jsonl`
+  - `data/examples/preference_profile.json`
+- Files Changed:
+  - `.claude.md`（追加 R-004 完整评审报告）
+  - `WORK_PROGRESS.md`（本条目）
+- Review Checklist:
+  - [x] 代码整体评级: A-
+  - [x] 测试整体评级: B-（需加强）
+  - [x] 文档整体评级: A-
+  - [x] R-003 闭环率: 67%
+  - [x] 新发现 P2 项 5 个，P3 项 3 个
+  - [x] 端到端运行验证通过
+  - [x] 安全审查通过（无凭证泄漏、无注入风险）
+  - [x] 自查 SC-004 完成
+
 ## Entry 026
 - Timestamp: 2026-02-10 00:41:34 +08:00
 - Stage: R-009创新实现与消融实验
@@ -561,3 +601,63 @@
   - [x] ablation脚本可复现
   - [x] benchmark回归通过
   - [x] 关键结论有数据支撑
+
+## Entry R-005-Review (Claude Opus)
+- Timestamp: 2026-02-10 15:30:00 +08:00
+- Stage: R-005 创新代码评审（by Claude Opus 4.6）
+- Actions:
+  - 审读 CEG/ARB/DMG 三创新实现的 7 个变更模块
+  - 验证 CEG priority 公式、ARB scale 公式、DMG Jaccard 兼容性逻辑
+  - 审读 3 个新测试文件（5 个方法）
+  - 运行 17/17 单元测试 — 全部通过
+  - 审读消融实验脚本（300 行）和报告
+  - 发现保护偏好可被 source_weight/staleness 覆盖的逻辑问题（P2-NEW-9）
+- Files Reviewed:
+  - `src/memory_cluster/models.py`（变更部分）
+  - `src/memory_cluster/compress.py`（CEG 实现）
+  - `src/memory_cluster/cluster.py`（DMG 实现）
+  - `src/memory_cluster/preference.py`（ARB + 保护偏好）
+  - `src/memory_cluster/pipeline.py`（集成变更）
+  - `src/memory_cluster/eval.py`（新指标）
+  - `src/memory_cluster/cli.py`（新参数）
+  - `tests/test_conflict_graph_and_budget.py`
+  - `tests/test_dual_merge_guard.py`
+  - `tests/test_protected_preferences.py`
+  - `scripts/run_ablation.py`
+  - `docs/eval/ablation_report_cn.md`
+  - `docs/eval/ablation_explained_cn.md`
+- Files Changed:
+  - `.claude.md`（追加 R-005 评审报告）
+  - `WORK_PROGRESS.md`（本条目）
+- Review Checklist:
+  - [x] CEG 评级 A-：图结构+优先级计算正确
+  - [x] ARB 评级 A：公式数学正确，参数全部可配置
+  - [x] DMG 评级 A-：双通道门控+统计输出完整
+  - [x] 消融实验评级 A-：5 场景覆盖，增量增益清晰
+  - [x] 17/17 测试全绿
+  - [x] P2-NEW-9 保护降级覆盖问题已标注
+  - [x] 自查 SC-005 完成
+
+## Entry 027
+- Timestamp: 2026-02-10 00:52:12 +08:00
+- Stage: P2-NEW-9修复与一致性更新
+- Actions:
+  - 修复 `preference.py` 中 protected 片段可被 source/staleness 降级覆盖的问题
+  - 新增回归测试：保护片段在低权重且过期条件下仍保持 `strong`
+  - 全量回归测试通过（18/18）
+  - 同步更新文档中的测试计数（`FINAL_REPORT.md`, `next_phase_plan.md`）
+- Files Reviewed:
+  - `src/memory_cluster/preference.py`
+  - `tests/test_protected_preferences.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Files Changed:
+  - `src/memory_cluster/preference.py`
+  - `tests/test_protected_preferences.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Review Checklist:
+  - [x] 保护命中后不再执行降级路径
+  - [x] 保护逻辑新增回归测试
+  - [x] 全量测试18/18通过
+  - [x] 文档计数与测试结果一致

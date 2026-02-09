@@ -28,7 +28,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：17/17 通过
+- 结果：18/18 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
 - `avg_ms`: 2.592
@@ -61,7 +61,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 17 条）
+- 测试：`tests/`（当前 18 条）
 - 数据：`data/examples/`
 - 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`
 - 实验报告：`docs/eval/ablation_report_cn.md`
