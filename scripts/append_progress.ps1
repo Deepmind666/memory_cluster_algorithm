@@ -1,11 +1,15 @@
-﻿param(
+﻿[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+param(
     [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string]$Stage,
 
     [string[]]$Actions = @(),
     [string[]]$FilesReviewed = @(),
     [string[]]$FilesChanged = @(),
     [string[]]$ReviewChecklist = @(),
+
+    [ValidateNotNullOrEmpty()]
     [string]$LogFile = "WORK_PROGRESS.md"
 )
 
@@ -19,7 +23,7 @@ function New-LogHeader {
 "@ | Set-Content -Encoding UTF8 $Path
 }
 
-function Normalize-List {
+function ConvertTo-NormalizedList {
     param([string[]]$Items)
 
     $normalized = New-Object System.Collections.Generic.List[string]
@@ -35,7 +39,8 @@ function Normalize-List {
                     $normalized.Add($trimmed)
                 }
             }
-        } else {
+        }
+        else {
             $normalized.Add($item.Trim())
         }
     }
@@ -43,16 +48,44 @@ function Normalize-List {
     return $normalized
 }
 
-if (-not (Test-Path $LogFile)) {
-    New-LogHeader -Path $LogFile
+function ConvertTo-ChecklistLine {
+    param([string]$Item)
+
+    $value = if ($null -eq $Item) { '' } else { $Item }
+    $trimmed = $value.Trim()
+    if ([string]::IsNullOrWhiteSpace($trimmed)) {
+        return "  - [ ] (empty)"
+    }
+
+    if ($trimmed -match '^\[(x|X| )\]\s+') {
+        return "  - $trimmed"
+    }
+
+    return "  - [x] $trimmed"
 }
 
-$Actions = Normalize-List -Items $Actions
-$FilesReviewed = Normalize-List -Items $FilesReviewed
-$FilesChanged = Normalize-List -Items $FilesChanged
-$ReviewChecklist = Normalize-List -Items $ReviewChecklist
+$logPath = [System.IO.Path]::GetFullPath($LogFile)
+$parent = Split-Path -Parent $logPath
+if ($parent -and -not (Test-Path $parent)) {
+    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+}
 
-$raw = Get-Content -Raw -Encoding UTF8 $LogFile
+if (-not (Test-Path $logPath)) {
+    if ($PSCmdlet.ShouldProcess($logPath, "Create progress log header")) {
+        New-LogHeader -Path $logPath
+    }
+}
+
+$Actions = ConvertTo-NormalizedList -Items $Actions
+$FilesReviewed = ConvertTo-NormalizedList -Items $FilesReviewed
+$FilesChanged = ConvertTo-NormalizedList -Items $FilesChanged
+$ReviewChecklist = ConvertTo-NormalizedList -Items $ReviewChecklist
+
+$raw = ""
+if (Test-Path $logPath) {
+    $raw = Get-Content -Raw -Encoding UTF8 $logPath
+}
+
 $entryCount = ([regex]::Matches($raw, '^## Entry\s+\d+', 'Multiline')).Count
 $nextEntry = $entryCount + 1
 $entryId = $nextEntry.ToString('000')
@@ -67,7 +100,8 @@ $lines.Add("- Actions:")
 
 if ($Actions.Count -eq 0) {
     $lines.Add("  - (none)")
-} else {
+}
+else {
     foreach ($item in $Actions) {
         $lines.Add("  - $item")
     }
@@ -76,7 +110,8 @@ if ($Actions.Count -eq 0) {
 $lines.Add("- Files Reviewed:")
 if ($FilesReviewed.Count -eq 0) {
     $lines.Add("  - (none)")
-} else {
+}
+else {
     foreach ($item in $FilesReviewed) {
         $lines.Add('  - `' + $item + '`')
     }
@@ -85,7 +120,8 @@ if ($FilesReviewed.Count -eq 0) {
 $lines.Add("- Files Changed:")
 if ($FilesChanged.Count -eq 0) {
     $lines.Add("  - (none)")
-} else {
+}
+else {
     foreach ($item in $FilesChanged) {
         $lines.Add('  - `' + $item + '`')
     }
@@ -94,11 +130,14 @@ if ($FilesChanged.Count -eq 0) {
 $lines.Add("- Review Checklist:")
 if ($ReviewChecklist.Count -eq 0) {
     $lines.Add("  - [ ] (not provided)")
-} else {
+}
+else {
     foreach ($item in $ReviewChecklist) {
-        $lines.Add("  - [x] $item")
+        $lines.Add((ConvertTo-ChecklistLine -Item $item))
     }
 }
 
-Add-Content -Encoding UTF8 -Path $LogFile -Value ($lines -join [Environment]::NewLine)
-Write-Output "Appended Entry $entryId to $LogFile"
+if ($PSCmdlet.ShouldProcess($logPath, "Append progress entry $entryId")) {
+    Add-Content -Encoding UTF8 -Path $logPath -Value ($lines -join [Environment]::NewLine)
+    Write-Output "Appended Entry $entryId to $logPath"
+}

@@ -1,0 +1,25 @@
+﻿{
+  "category_strength": {
+    "requirement": "strong",
+    "method": "strong",
+    "evidence": "strong",
+    "preference": "strong",
+    "noise": "discardable"
+  },
+  "source_weight": {
+    "planner_agent": 1.1,
+    "writer_agent": 1.0,
+    "verifier_agent": 1.6
+  },
+  "stale_after_hours": 168,
+  "detail_budget": {
+    "strong": 900,
+    "weak": 500,
+    "discardable": 180
+  },
+  "keep_conflicts": true,
+  "strict_conflict_split": false,
+  "source_promote_threshold": 1.5,
+  "source_demote_threshold": 0.8,
+  "semantic_dedup_threshold": 0.88
+}

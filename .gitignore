@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+*.egg-info/
+dist/
+build/
 
 # Logs and temp
 *.log
@@ -18,3 +21,9 @@ Thumbs.db
 
 # Local assistant settings
 .claude/
+.codex/
+
+# IDE / workspace
+.vscode/
+.idea/
+*.code-workspace
