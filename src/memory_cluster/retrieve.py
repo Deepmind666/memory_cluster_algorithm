@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .embed import EmbeddingProvider, cosine_similarity
+from .time_utils import parse_iso_utc
 
 
 _STRENGTH_BONUS = {
@@ -12,21 +13,6 @@ _STRENGTH_BONUS = {
     "discardable": -0.02,
 }
 _CONFLICT_TOKENS = {"冲突", "矛盾", "conflict", "inconsistent", "disagree"}
-
-
-def _parse_iso(ts: str) -> datetime | None:
-    raw = (ts or "").strip()
-    if not raw:
-        return None
-    if raw.endswith("Z"):
-        raw = raw[:-1] + "+00:00"
-    try:
-        dt = datetime.fromisoformat(raw)
-    except ValueError:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
 
 
 class MemoryRetriever:
@@ -105,7 +91,7 @@ class MemoryRetriever:
         return float(_STRENGTH_BONUS.get(strength, 0.0))
 
     def _freshness_bonus(self, ts: str) -> float:
-        dt = _parse_iso(ts)
+        dt = parse_iso_utc(ts)
         if dt is None:
             return 0.0
         age_hours = max(0.0, (datetime.now(timezone.utc) - dt).total_seconds() / 3600.0)
@@ -118,7 +104,7 @@ class MemoryRetriever:
         return 0.0
 
     def _sort_timestamp(self, ts: str) -> float:
-        dt = _parse_iso(ts)
+        dt = parse_iso_utc(ts)
         if dt is None:
             return 0.0
         return float(dt.timestamp())

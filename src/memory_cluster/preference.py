@@ -5,18 +5,13 @@ from datetime import datetime, timezone
 import math
 
 from .models import MemoryFragment, PreferenceConfig
+from .time_utils import parse_iso_utc
 
 
 def _parse_iso(ts: str) -> datetime:
-    raw = (ts or "").strip()
-    if raw.endswith("Z"):
-        raw = raw[:-1] + "+00:00"
-    try:
-        dt = datetime.fromisoformat(raw)
-    except ValueError:
+    dt = parse_iso_utc(ts)
+    if dt is None:
         return datetime.now(timezone.utc)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
     return dt
 
 

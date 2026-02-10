@@ -10,7 +10,7 @@
 
 已执行检查：
 
-- `python -m unittest discover -s tests -p "test_*.py" -q` -> 21/21 通过
+- `python -m unittest discover -s tests -p "test_*.py" -q` -> 23/23 通过
 - 凭证扫描（关键字）：`ghp_`, `token`, `password`, `secret`, `private key`
 - 高风险 API 扫描：`eval/exec/os.system/pickle.loads/yaml.load`
 - 核心模块人工复核：

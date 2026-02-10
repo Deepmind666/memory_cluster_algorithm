@@ -787,3 +787,77 @@
   - [x] 风险按优先级分级
   - [x] 专利潜力结论可追溯
   - [x] Claude 对比模板可直接使用
+
+## Entry 031
+- Timestamp: 2026-02-10 10:27:47 +08:00
+- Stage: 对齐 Claude R-008 评审并修复高优先问题
+- Actions:
+  - 修复 prune benchmark 报告与 JSON 不一致问题（同次 payload 生成报告）
+  - 增加多场景 benchmark：merge_active / realistic_068_082 / sparse_no_merge
+  - 新增 `merge_activity_present` 指标，避免 `cluster_count_equal` 空结论
+  - 抽取共享时间解析工具 `time_utils.parse_iso_utc`
+  - 补充专利文档：05 量化结果、08 三联表、06 新增权利要求17
+  - 产出 Claude 评审对照响应文档
+- Files Reviewed:
+  - `scripts/run_prune_benchmark.py`
+  - `outputs/prune_benchmark.json`
+  - `docs/eval/prune_benchmark_report.md`
+  - `src/memory_cluster/retrieve.py`
+  - `src/memory_cluster/preference.py`
+  - `docs/patent_kit/05_具体实施方式.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/patent_kit/08_对比文件与绕开说明.md`
+- Files Changed:
+  - `scripts/run_prune_benchmark.py`
+  - `docs/eval/prune_benchmark_report.md`
+  - `src/memory_cluster/time_utils.py`
+  - `src/memory_cluster/retrieve.py`
+  - `src/memory_cluster/preference.py`
+  - `tests/test_time_utils.py`
+  - `docs/patent_kit/05_具体实施方式.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/patent_kit/08_对比文件与绕开说明.md`
+  - `docs/patent_kit/09_授权潜力评估与下一步建议.md`
+  - `docs/review/r008_response_codex.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Review Checklist:
+  - [x] 评审 P1 项可复现修复
+  - [x] 报告与 JSON 同步
+  - [x] 23/23 测试通过
+  - [x] 专利文档缺口补齐（本轮范围）
+
+## Entry R-008-StrictReview (Claude Opus)
+- Timestamp: 2026-02-10 19:00:00 +08:00
+- Stage: R-008 全量严格评审（by Claude Opus 4.6，按 claude46_strict_review_checklist.md 执行）
+- Actions:
+  - P0 门禁 6/6 全部实际运行验证：21/21 单测、编译、ablation、prune benchmark、E2E CLI、指标文件
+  - CEG/ARB/DMG/Prune 四创新逐行审读 + 数学验证（Prune Cauchy-Schwarz 上界正确性确认）
+  - 13 个源码模块 + 11 个测试文件逐文件审查
+  - Prune benchmark 深度分析：发现 similarity_threshold=2.0 导致 merges_applied=0，cluster_count_equal 恒真
+  - Prune benchmark report.md (5.7%) 与 JSON (18.9%) 数据不一致（不同次运行）
+  - 专利一致性核查 + 安全审查
+  - 输出 P0:0 / P1:2 / P2:8 / P3:5 分级结论，全部含文件:行号证据
+  - 完整评审报告写入 .claude.md（R-008 条目）
+- Files Reviewed:
+  - `src/memory_cluster/*.py`（全部 13 个）
+  - `tests/test_*.py`（全部 11 个）
+  - `scripts/run_prune_benchmark.py`
+  - `scripts/run_ablation.py`
+  - `docs/eval/prune_benchmark_report.md`
+  - `docs/review/claude46_strict_review_checklist.md`
+  - `docs/patent_kit/*.md`（一致性核查）
+  - `outputs/prune_benchmark.json`
+  - `outputs/ablation_metrics.json`
+- Files Changed:
+  - `.claude.md`（追加 R-008 全量严格评审报告）
+  - `WORK_PROGRESS.md`（本条目）
+- Review Checklist:
+  - [x] P0 门禁 6/6 PASS
+  - [x] 算法完成度 CEG/ARB/DMG/Prune 全部 PASS
+  - [x] Prune 上界数学正确性验证 PASS
+  - [x] 21/21 测试全绿
+  - [x] P1-1 Prune benchmark 空洞验证已标注
+  - [x] P1-2 报告/JSON 不一致已标注
+  - [x] 按 checklist §8 模板输出完整 Findings/Evidence/Gates/Fix/Risks
+  - [x] 自查 SC-008 完成

@@ -30,11 +30,11 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：20/20 通过
+- 结果：23/23 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
-- `avg_ms`: 2.495
-- `p95_ms`: 2.718
+- `avg_ms`: 3.686
+- `p95_ms`: 4.468
 - `fragment_count`: 12
 - `cluster_count`: 10
 - `compression_ratio`: 1.299694
@@ -65,17 +65,25 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ### 3.4 Merge Upper-Bound Prune 对照实验（synthetic_merge_prune_case）
 来源：`outputs/prune_benchmark.json`
 
-- 设定：`fragment_count=100`, `similarity_threshold=2.0`, `merge_threshold=0.95`
-- 结果：
-  - baseline（prune off）`avg_ms=256.231`
-  - optimized（prune on）`avg_ms=241.559`
-  - `avg_speedup_ratio=5.7261%`
+- Primary（merge_active_case）设定：`fragment_count=100`, `similarity_threshold=0.82`, `merge_threshold=0.85`
+- Primary 结果：
+  - baseline（prune off）`avg_ms=13.949`
+  - optimized（prune on）`avg_ms=13.610`
+  - `avg_speedup_ratio=2.4303%`
+  - `cluster_count_equal=true`
+  - `merge_activity_present=true`（非空洞对比）
+
+- Secondary（realistic_068_082_case）设定：`similarity_threshold=0.68`, `merge_threshold=0.82`
+  - `merge_activity_present=false`（该场景不进入 merge 阶段）
+
+- Secondary（sparse_no_merge_case）设定：`similarity_threshold=2.0`, `merge_threshold=0.95`
+  - `avg_speedup_ratio=16.8546%`
   - `merge_pairs_pruned_by_bound=2519`
-  - `cluster_count_equal=true`（结果一致）
+  - `cluster_count_equal=true`
 
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 20 条）
+- 测试：`tests/`（当前 23 条）
 - 数据：`data/examples/`
 - 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`
 - 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/prune_benchmark_report.md`
