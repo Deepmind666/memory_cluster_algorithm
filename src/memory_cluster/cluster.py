@@ -27,6 +27,9 @@ class IncrementalClusterer:
         merge_conflict_compat_threshold: float = 0.55,
         enable_merge_upper_bound_prune: bool = False,
         merge_prune_dims: int = 48,
+        enable_merge_candidate_filter: bool = False,
+        merge_candidate_bucket_dims: int = 10,
+        merge_candidate_max_neighbors: int = 16,
     ) -> None:
         self.similarity_threshold = similarity_threshold
         self.merge_threshold = merge_threshold
@@ -35,12 +38,16 @@ class IncrementalClusterer:
         self.merge_conflict_compat_threshold = merge_conflict_compat_threshold
         self.enable_merge_upper_bound_prune = enable_merge_upper_bound_prune
         self.merge_prune_dims = max(0, int(merge_prune_dims))
+        self.enable_merge_candidate_filter = enable_merge_candidate_filter
+        self.merge_candidate_bucket_dims = max(1, int(merge_candidate_bucket_dims))
+        self.merge_candidate_max_neighbors = max(1, int(merge_candidate_max_neighbors))
         self._counter = 0
         self._id_pattern = re.compile(r"^cluster-(\d+)$")
         self.merge_attempts = 0
         self.merges_applied = 0
         self.merges_blocked_by_guard = 0
         self.merge_pairs_pruned_by_bound = 0
+        self.merge_pairs_skipped_by_candidate_filter = 0
 
     def assign(
         self,
@@ -84,6 +91,7 @@ class IncrementalClusterer:
         merged = True
         while merged:
             merged = False
+            candidate_neighbors = self._build_candidate_neighbors(active)
             bound_cache = self._build_bound_cache(active)
             for i in range(len(active)):
                 base = active[i]
@@ -93,6 +101,11 @@ class IncrementalClusterer:
                     other = active[j]
                     if other is None:
                         continue
+                    if candidate_neighbors is not None:
+                        allowed = candidate_neighbors.get(base.cluster_id) or set()
+                        if other.cluster_id not in allowed:
+                            self.merge_pairs_skipped_by_candidate_filter += 1
+                            continue
                     if not self._cluster_tags_compatible(base, other):
                         continue
                     self.merge_attempts += 1
@@ -182,7 +195,72 @@ class IncrementalClusterer:
             "merges_applied": int(self.merges_applied),
             "merges_blocked_by_guard": int(self.merges_blocked_by_guard),
             "merge_pairs_pruned_by_bound": int(self.merge_pairs_pruned_by_bound),
+            "merge_pairs_skipped_by_candidate_filter": int(self.merge_pairs_skipped_by_candidate_filter),
         }
+
+    def _build_candidate_neighbors(self, clusters: list[MemoryCluster]) -> dict[str, set[str]] | None:
+        if not self.enable_merge_candidate_filter:
+            return None
+        if len(clusters) < 2:
+            return {}
+
+        signatures: dict[str, tuple[int, ...]] = {}
+        bucket_to_ids: dict[tuple[int, ...], list[str]] = {}
+        for cluster in clusters:
+            signature = self._candidate_signature(cluster.centroid)
+            signatures[cluster.cluster_id] = signature
+            bucket_to_ids.setdefault(signature, []).append(cluster.cluster_id)
+
+        neighbors: dict[str, set[str]] = {}
+        for cluster in clusters:
+            cid = cluster.cluster_id
+            signature = signatures.get(cid) or ()
+            picked: list[str] = []
+
+            for peer_id in bucket_to_ids.get(signature, []):
+                if peer_id != cid:
+                    picked.append(peer_id)
+
+            for adjacent in self._adjacent_signatures(signature):
+                if len(picked) >= self.merge_candidate_max_neighbors:
+                    break
+                for peer_id in bucket_to_ids.get(adjacent, []):
+                    if peer_id != cid:
+                        picked.append(peer_id)
+                        if len(picked) >= self.merge_candidate_max_neighbors:
+                            break
+
+            deduped: list[str] = []
+            seen: set[str] = set()
+            for peer_id in picked:
+                if peer_id in seen:
+                    continue
+                seen.add(peer_id)
+                deduped.append(peer_id)
+                if len(deduped) >= self.merge_candidate_max_neighbors:
+                    break
+            neighbors[cid] = set(deduped)
+
+        for cid, linked in list(neighbors.items()):
+            for peer_id in linked:
+                neighbors.setdefault(peer_id, set()).add(cid)
+        return neighbors
+
+    def _candidate_signature(self, vector: list[float]) -> tuple[int, ...]:
+        dim = min(len(vector), self.merge_candidate_bucket_dims)
+        if dim <= 0:
+            return ()
+        return tuple(1 if float(vector[idx]) >= 0.0 else 0 for idx in range(dim))
+
+    def _adjacent_signatures(self, signature: tuple[int, ...]) -> list[tuple[int, ...]]:
+        if not signature:
+            return []
+        output: list[tuple[int, ...]] = []
+        for idx in range(len(signature)):
+            row = list(signature)
+            row[idx] = 1 - row[idx]
+            output.append(tuple(row))
+        return output
 
     def _build_bound_cache(self, clusters: list[MemoryCluster]) -> dict[str, dict[str, object]]:
         if not self.enable_merge_upper_bound_prune or self.merge_prune_dims <= 0:

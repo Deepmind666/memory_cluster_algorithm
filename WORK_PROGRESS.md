@@ -1052,3 +1052,67 @@
   - [x] Experiment data cross-validated
   - [x] Comprehensive review written to docs/review/
   - [x] .claude.md updated with R-010 entry
+
+## Entry R-015
+- Timestamp: 2026-02-10 13:40:22 +08:00
+- Stage: 性能工程推进（候选筛选降耗原型）
+- Actions:
+  - 新增 merge 候选筛选配置：`enable_merge_candidate_filter`、`merge_candidate_bucket_dims`、`merge_candidate_max_neighbors`。
+  - 在 `cluster.py` 合并循环中加入签名桶候选图，减少无效 pair 比较。
+  - 新增审计指标：`merge_pairs_skipped_by_candidate_filter`。
+  - CLI build 新增参数：`--enable-merge-candidate-filter`、`--merge-candidate-bucket-dims`、`--merge-candidate-max-neighbors`。
+  - 新增单测：`tests/test_merge_candidate_filter.py`。
+  - 新增 benchmark 脚本与报告：
+    - `scripts/run_candidate_filter_benchmark.py`
+    - `docs/eval/candidate_filter_benchmark_report.md`
+  - 更新文档：`README.md`、`docs/FINAL_REPORT.md`、`docs/design/next_phase_plan.md`。
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_merge_candidate_filter.py`
+  - `scripts/run_candidate_filter_benchmark.py`
+  - `docs/eval/candidate_filter_benchmark_report.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Files Changed:
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_merge_candidate_filter.py`
+  - `scripts/run_candidate_filter_benchmark.py`
+  - `docs/eval/candidate_filter_benchmark_report.md`
+  - `README.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `.claude.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 新增候选筛选开关默认关闭（exact 模式保留）
+  - [x] 新增指标可观测（skip pair 计数）
+  - [x] 新增单测通过
+  - [x] 全量测试通过（38/38）
+  - [x] compileall 通过
+  - [x] benchmark 报告已生成并记录参数
+
+## Entry R-010b-Verification
+- Timestamp: 2026-02-10
+- Stage: R-010 修复验证 + 阶段决策
+- Reviewer: Claude Opus 4.6
+- Actions:
+  - 验证 191b7cd 对 R-010 全部 5 项发现的修复
+  - P1-1 正则 alternation order: 已修复 (最长优先)
+  - P2-1 flag masked_spans: 已修复 (_add_flag_pairs_from_text)
+  - P2-2 条件内否定: 已修复 (作用域内运行否定模式)
+  - P2-3 中文测试: 已修复 (4 个新测试 s4-s7)
+  - P2-4 报告格式: 已修复 (结构化 key-value)
+  - 35/35 测试通过
+- Decision: **确认可以进入下一阶段**
+- Rating: A- (从 B+ 提升)
+- Review Checklist:
+  - [x] P1-1 修复实测验证通过
+  - [x] P2-1/P2-2/P2-3/P2-4 全部验证通过
+  - [x] 35/35 tests pass
+  - [x] .claude.md updated with R-010b

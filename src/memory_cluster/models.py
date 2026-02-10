@@ -150,6 +150,9 @@ class PreferenceConfig:
     merge_conflict_compat_threshold: float = 0.55
     enable_merge_upper_bound_prune: bool = False
     merge_prune_dims: int = 48
+    enable_merge_candidate_filter: bool = False
+    merge_candidate_bucket_dims: int = 10
+    merge_candidate_max_neighbors: int = 16
     hard_keep_tags: list[str] = field(default_factory=list)
     protected_path_prefixes: list[str] = field(default_factory=list)
     protected_scopes: list[str] = field(default_factory=lambda: ["global_task", "current_task"])
@@ -179,6 +182,9 @@ class PreferenceConfig:
             merge_conflict_compat_threshold=float(data.get("merge_conflict_compat_threshold", 0.55)),
             enable_merge_upper_bound_prune=bool(data.get("enable_merge_upper_bound_prune", False)),
             merge_prune_dims=max(0, int(data.get("merge_prune_dims", 48))),
+            enable_merge_candidate_filter=bool(data.get("enable_merge_candidate_filter", False)),
+            merge_candidate_bucket_dims=max(1, int(data.get("merge_candidate_bucket_dims", 10))),
+            merge_candidate_max_neighbors=max(1, int(data.get("merge_candidate_max_neighbors", 16))),
             hard_keep_tags=[str(x) for x in (data.get("hard_keep_tags") or [])],
             protected_path_prefixes=[str(x) for x in (data.get("protected_path_prefixes") or [])],
             protected_scopes=[str(x) for x in (data.get("protected_scopes") or ["global_task", "current_task"])],

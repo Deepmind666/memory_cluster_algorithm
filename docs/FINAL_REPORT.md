@@ -14,6 +14,7 @@
 - [x] ARB（自适应保留预算）
 - [x] DMG（双通道合并门控）
 - [x] Merge Upper-Bound Prune（安全上界剪枝）
+- [x] Merge Candidate Filter（候选筛选降耗，默认关闭）
 - [x] 消融实验脚本与报告（baseline/ceg/arb/dmg/full）
 - [x] 存储可靠性增强（ingest 幂等 + JSONL 容错加载）
 - [x] 冲突语义增强（否定/条件/反事实 slot 抽取）
@@ -21,20 +22,21 @@
 ## 2. 核心命令
 ```powershell
 python -m src.memory_cluster.cli ingest --input data/examples/multi_agent_memory_fragments.jsonl --store outputs/memory_store.jsonl
-python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-merge-upper-bound-prune --merge-prune-dims 48 --enable-l2-clusters --l2-min-children 2
+python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-merge-upper-bound-prune --merge-prune-dims 48 --enable-merge-candidate-filter --merge-candidate-bucket-dims 10 --merge-candidate-max-neighbors 16 --enable-l2-clusters --l2-min-children 2
 python -m src.memory_cluster.cli query --state outputs/cluster_state_full.json --query "冲突 alpha" --top-k 3 --cluster-level all --expand
 python scripts/run_benchmark.py --input data/examples/multi_agent_memory_fragments.jsonl --preferences data/examples/preference_profile.json --output outputs/benchmark_latest.json --runs 5
 python scripts/run_ablation.py --output outputs/ablation_metrics.json --report docs/eval/ablation_report_cn.md
 python scripts/run_ablation.py --output outputs/ablation_metrics_large.json --report docs/eval/ablation_report_large_cn.md --fragment-count 100 --similarity-threshold 0.68 --merge-threshold 0.82 --dataset-label synthetic_conflict_memory_case_large
 python scripts/run_ablation.py --output outputs/ablation_metrics_stress.json --report docs/eval/ablation_report_stress_cn.md --fragment-count 100 --similarity-threshold 1.1 --merge-threshold 0.05 --dataset-label synthetic_conflict_memory_case_stress
 python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
+python scripts/run_candidate_filter_benchmark.py --output outputs/candidate_filter_benchmark.json --report docs/eval/candidate_filter_benchmark_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：35/35 通过
+- 结果：38/38 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
 - `avg_ms`: 2.503
@@ -100,12 +102,28 @@ python -m unittest discover -s tests -p "test_*.py" -v
   - DMG 增益：`mixed_mode_clusters_reduction=1`, `merge_block_gain=+120`, `cluster_count_delta=+3`
   - full 相对 baseline：`detail_budget_avg_gain_vs_baseline=+21.25`
 
+### 3.6 Merge Candidate Filter 对照实验（synthetic_candidate_filter_case）
+来源：`outputs/candidate_filter_benchmark.json`
+
+- 参数：`bucket_dims=10`, `max_neighbors=16`（可开关，默认关闭）
+
+- sparse_no_merge_case（`2.0/0.95`）：
+  - `avg_speedup_ratio=42.6363%`
+  - `attempt_reduction_ratio=75.0140%`
+  - `cluster_count_equal=true`
+
+- merge_active_case（`0.82/0.85`）：
+  - `avg_speedup_ratio=19.8265%`
+  - `attempt_reduction_ratio=44.4496%`
+  - `cluster_count_equal=true`
+  - `merges_applied` 与 baseline 一致（21）
+
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 35 条）
+- 测试：`tests/`（当前 38 条）
 - 数据：`data/examples/`
-- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`
-- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`
+- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`
+- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`
 - 规格：`docs/design/algorithm_spec.md`, `docs/design/algorithm_spec_detailed.md`
 - 快申计划：`docs/design/cn_fast_track_patent_plan.md`
 - 专利草案：`docs/patent_kit/`
