@@ -110,6 +110,33 @@ class TestRetrieverOrdering(unittest.TestCase):
         self.assertEqual(only_l2[0]["cluster_id"], "l2-a")
         self.assertEqual(only_l2[0]["level"], 2)
 
+    def test_chinese_conflict_query_uses_conflict_priority_bonus(self) -> None:
+        provider = DummyEmbeddingProvider({"冲突": [1.0, 0.0], "same": [0.0, 1.0]})
+        retriever = MemoryRetriever(provider)  # type: ignore[arg-type]
+        state = {
+            "clusters": [
+                {
+                    "cluster_id": "high-priority",
+                    "centroid": [1.0, 0.0],
+                    "summary": "same",
+                    "tags": {"retention_strength": "weak", "conflict_priority": 3.0},
+                    "last_updated": "2026-02-09T00:00:00+00:00",
+                },
+                {
+                    "cluster_id": "low-priority",
+                    "centroid": [1.0, 0.0],
+                    "summary": "same",
+                    "tags": {"retention_strength": "weak", "conflict_priority": 0.0},
+                    "last_updated": "2026-02-09T00:00:00+00:00",
+                },
+            ],
+            "fragments": [],
+        }
+
+        results = retriever.query(state=state, query_text="冲突", top_k=2)
+        self.assertEqual(results[0]["cluster_id"], "high-priority")
+        self.assertEqual(results[1]["cluster_id"], "low-priority")
+
 
 if __name__ == "__main__":
     unittest.main()

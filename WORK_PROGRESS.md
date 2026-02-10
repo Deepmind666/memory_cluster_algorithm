@@ -760,3 +760,30 @@
   - [x] 进展快照与当前代码状态一致
   - [x] 清单可直接执行（含命令与通过标准）
   - [x] 覆盖专利导向审查项（问题-手段-效果）
+
+## Entry 030
+- Timestamp: 2026-02-10 10:27:47 +08:00
+- Stage: 自查漏洞与专利潜力自评（等待 Claude 对比前）
+- Actions:
+  - 执行凭证/危险API快速扫描与全量单测
+  - 输出分级风险清单（P1/P2/P3）与已修复项
+  - 给出中国法域下的专利潜力技术评估
+  - 预置下一轮 Claude 评审差异对比模板
+- Files Reviewed:
+  - `src/memory_cluster/store.py`
+  - `src/memory_cluster/retrieve.py`
+  - `src/memory_cluster/cli.py`
+  - `src/memory_cluster/compress.py`
+  - `docs/patent_kit/05_具体实施方式.md`
+  - `docs/patent_kit/08_对比文件与绕开说明.md`
+  - `docs/patent_kit/09_授权潜力评估与下一步建议.md`
+- Files Changed:
+  - `tests/test_retrieve_ordering.py`
+  - `docs/review/self_audit_patent_potential_r010.md`
+  - `docs/review/claude_review_diff_template.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 单测通过（21/21）
+  - [x] 风险按优先级分级
+  - [x] 专利潜力结论可追溯
+  - [x] Claude 对比模板可直接使用
