@@ -45,6 +45,11 @@ python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --re
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
+## 可靠性说明（ingest/build）
+- `ingest` 默认启用幂等写入（按 `id + version` 去重），可用 `--no-idempotent` 关闭。
+- 输入 JSONL 默认容错（坏行跳过并统计），可用 `--strict-input` 改为遇错即失败。
+- `build` 读取存储默认容错（坏行跳过并统计），可用 `--strict-store` 改为遇错即失败。
+
 ## 进展与质量门禁
 - 进展日志：`WORK_PROGRESS.md`
 - 质量清单：`docs/REVIEW_CHECKLIST.md`

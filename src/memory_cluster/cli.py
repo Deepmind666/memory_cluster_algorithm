@@ -17,30 +17,77 @@ def _load_json(path: str | Path) -> dict[str, Any]:
         return json.load(handle)
 
 
-def _load_fragments_from_jsonl(path: str | Path) -> list[MemoryFragment]:
+def _load_fragments_from_jsonl(path: str | Path, strict: bool = False) -> tuple[list[MemoryFragment], dict[str, int]]:
     rows: list[MemoryFragment] = []
+    stats = {
+        "total_lines": 0,
+        "parsed_lines": 0,
+        "skipped_blank": 0,
+        "skipped_invalid": 0,
+        "decode_errors": 0,
+        "schema_errors": 0,
+    }
     with Path(path).open("r", encoding="utf-8-sig") as handle:
-        for line in handle:
-            line = line.strip()
+        for lineno, raw_line in enumerate(handle, start=1):
+            stats["total_lines"] += 1
+            line = raw_line.strip()
             if not line:
+                stats["skipped_blank"] += 1
                 continue
-            rows.append(MemoryFragment.from_dict(json.loads(line)))
-    return rows
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                stats["skipped_invalid"] += 1
+                stats["decode_errors"] += 1
+                if strict:
+                    raise ValueError(f"invalid input jsonl at line {lineno}: {exc.msg}") from exc
+                continue
+            try:
+                rows.append(MemoryFragment.from_dict(payload))
+                stats["parsed_lines"] += 1
+            except Exception as exc:  # defensive parse guard
+                stats["skipped_invalid"] += 1
+                stats["schema_errors"] += 1
+                if strict:
+                    raise ValueError(f"invalid fragment payload at line {lineno}: {exc}") from exc
+                continue
+    return rows, stats
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
-    fragments = _load_fragments_from_jsonl(args.input)
+    try:
+        fragments, input_stats = _load_fragments_from_jsonl(args.input, strict=bool(args.strict_input))
+    except ValueError as exc:
+        print(json.dumps({"status": "error", "message": str(exc), "input": args.input}, ensure_ascii=False))
+        return 1
+
     store = FragmentStore(args.store)
-    inserted = store.append_fragments(fragments)
-    print(json.dumps({"status": "ok", "inserted": inserted, "store": args.store}, ensure_ascii=False))
+    append_stats = store.append_fragments_with_stats(fragments=fragments, idempotent=bool(args.idempotent))
+    payload = {
+        "status": "ok",
+        "store": args.store,
+        "idempotent": bool(args.idempotent),
+        "input_stats": input_stats,
+        "append_stats": append_stats.to_dict(),
+    }
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
 def cmd_build(args: argparse.Namespace) -> int:
     store = FragmentStore(args.store)
-    fragments = store.load_latest_by_id()
+    try:
+        fragments, read_stats = store.load_latest_by_id_with_stats(strict=bool(args.strict_store))
+    except ValueError as exc:
+        print(json.dumps({"status": "error", "message": str(exc), "store": args.store}, ensure_ascii=False))
+        return 1
     if not fragments:
-        print(json.dumps({"status": "error", "message": "no fragments in store"}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"status": "error", "message": "no fragments in store", "store_read_stats": read_stats.to_dict()},
+                ensure_ascii=False,
+            )
+        )
         return 1
 
     preference = PreferenceConfig()
@@ -82,7 +129,18 @@ def cmd_build(args: argparse.Namespace) -> int:
         embedding_dim=args.embedding_dim,
     )
     save_result(args.output, result)
-    print(json.dumps({"status": "ok", "output": args.output, "metrics": result.metrics}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "output": args.output,
+                "metrics": result.metrics,
+                "store_read_stats": read_stats.to_dict(),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -121,12 +179,15 @@ def build_parser() -> argparse.ArgumentParser:
     ingest = sub.add_parser("ingest", help="Ingest jsonl fragments into store")
     ingest.add_argument("--input", required=True)
     ingest.add_argument("--store", required=True)
+    ingest.add_argument("--idempotent", action=argparse.BooleanOptionalAction, default=True)
+    ingest.add_argument("--strict-input", action=argparse.BooleanOptionalAction, default=False)
     ingest.set_defaults(func=cmd_ingest)
 
     build = sub.add_parser("build", help="Build clusters from stored fragments")
     build.add_argument("--store", required=True)
     build.add_argument("--output", required=True)
     build.add_argument("--preferences", required=False)
+    build.add_argument("--strict-store", action=argparse.BooleanOptionalAction, default=False)
     build.add_argument("--similarity-threshold", type=float, default=0.72)
     build.add_argument("--merge-threshold", type=float, default=0.9)
     build.add_argument("--category-strict", action="store_true")

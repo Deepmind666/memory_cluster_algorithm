@@ -95,7 +95,7 @@
 
 ## 4. 当前回归状态
 
-- `python -m unittest discover -s tests -p "test_*.py" -q` -> **23/23 通过**
+- `python -m unittest discover -s tests -p "test_*.py" -q` -> **28/28 通过**（含后续可靠性闸门新增测试）
 - `python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md` -> 通过
 
 ---

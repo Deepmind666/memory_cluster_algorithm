@@ -827,6 +827,36 @@
   - [x] 23/23 测试通过
   - [x] 专利文档缺口补齐（本轮范围）
 
+## Entry 032
+- Timestamp: 2026-02-10 11:12:35 +08:00
+- Stage: 可靠性闸门第1阶段（ingest 幂等 + 容错）
+- Actions:
+  - `store.py` 新增幂等写入与统计输出（按 `id+version` 去重）
+  - `store.py` 新增 JSONL 容错读取与 strict 模式
+  - 引入轻量 lock 文件机制，保护写入临界区
+  - `cli ingest/build` 新增严格开关与统计回传（`--idempotent`, `--strict-input`, `--strict-store`）
+  - 新增 `test_store_reliability.py`（幂等、坏行容错、strict、BOM 兼容）
+  - 文档同步（README、FINAL_REPORT、next_phase_plan）
+- Files Reviewed:
+  - `src/memory_cluster/store.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_store_reliability.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Files Changed:
+  - `src/memory_cluster/store.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_store_reliability.py`
+  - `README.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `docs/review/self_audit_patent_potential_r010.md`
+- Review Checklist:
+  - [x] 幂等写入行为可测
+  - [x] 容错与 strict 两种模式均可用
+  - [x] 全量测试通过（28/28）
+  - [x] CLI 输出包含可审计统计字段
+
 ## Entry R-008-StrictReview (Claude Opus)
 - Timestamp: 2026-02-10 19:00:00 +08:00
 - Stage: R-008 全量严格评审（by Claude Opus 4.6，按 claude46_strict_review_checklist.md 执行）

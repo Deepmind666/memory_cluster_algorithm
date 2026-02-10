@@ -23,7 +23,7 @@
 
 以下任一项失败，评审结论必须标记为 P0，不得直接进入专利材料定稿阶段。
 
-- [ ] `python -m unittest discover -s tests -p "test_*.py" -v` 全部通过（当前应为 20/20）。
+- [ ] `python -m unittest discover -s tests -p "test_*.py" -v` 全部通过（当前应为 28/28）。
 - [ ] `python -m compileall src tests scripts` 无语法错误。
 - [ ] `scripts/run_ablation.py` 可运行，输出 `outputs/ablation_metrics.json`。
 - [ ] `scripts/run_prune_benchmark.py` 可运行，输出 `outputs/prune_benchmark.json`。
@@ -230,6 +230,6 @@
 ## 9. 当前任务进度快照（供评审参考）
 
 - 算法主线完成度：高（CEG/ARB/DMG/L2/Prune 已实现并有测试）。
-- 代码稳定性：高（当前 20/20 单测通过）。
+- 代码稳定性：高（当前 28/28 单测通过）。
 - 实验证据：中高（已有 ablation 与 prune benchmark，可复现）。
 - 待继续推进：复杂冲突语义、超大规模性能、专利证据链收口。

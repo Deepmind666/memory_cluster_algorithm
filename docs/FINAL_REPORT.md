@@ -15,6 +15,7 @@
 - [x] DMG（双通道合并门控）
 - [x] Merge Upper-Bound Prune（安全上界剪枝）
 - [x] 消融实验脚本与报告（baseline/ceg/arb/dmg/full）
+- [x] 存储可靠性增强（ingest 幂等 + JSONL 容错加载）
 
 ## 2. 核心命令
 ```powershell
@@ -30,11 +31,11 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：23/23 通过
+- 结果：28/28 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
-- `avg_ms`: 3.686
-- `p95_ms`: 4.468
+- `avg_ms`: 2.503
+- `p95_ms`: 2.719
 - `fragment_count`: 12
 - `cluster_count`: 10
 - `compression_ratio`: 1.299694
@@ -83,7 +84,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 23 条）
+- 测试：`tests/`（当前 28 条）
 - 数据：`data/examples/`
 - 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`
 - 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/prune_benchmark_report.md`

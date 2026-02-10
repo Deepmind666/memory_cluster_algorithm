@@ -5,7 +5,7 @@
 ## 1. 当前状态
 - 已完成并验证：CEG / ARB / DMG 三项创新。
 - 已完成并验证：Merge Upper-Bound Prune（安全上界剪枝，开关可控）。
-- 单元测试：23/23 通过。
+- 单元测试：28/28 通过。
 - 已形成可复现消融实验：`scripts/run_ablation.py`。
 - 已形成可复现性能对照实验：`scripts/run_prune_benchmark.py`。
 - 已同步专利草案关键章节（权利要求、实施例、绕开说明）。
