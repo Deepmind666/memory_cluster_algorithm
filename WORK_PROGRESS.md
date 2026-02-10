@@ -974,3 +974,81 @@
   - [x] `python -m compileall src tests scripts` 通过
   - [x] ablation/prune 报告与对应 JSON 同次重跑
   - [x] 第二阶段文档与计划已同步
+
+## Entry R-014
+- Timestamp: 2026-02-10 13:06:08 +08:00
+- Stage: R-010 评审意见修复（P1/P2 关闭）
+- Actions:
+  - 修复 `NEGATED_KEY_VALUE_PATTERN` 前缀顺序，避免“不是 mode=fast”误提取为 slot=`是`。
+  - 修复 flag 抽取作用域污染：全局 flag 抽取加入 `masked_spans` 过滤。
+  - 增强条件/反事实内否定语义：支持 `cond:slot=!value`、`cf:slot=!value` 与作用域 flag。
+  - `run_ablation.py` 报告 summary 改为可读指标行 + Raw JSON 附录。
+  - 新增中文语义测试（否定/条件/反事实）并修复 `test_edge_cases.py` 乱码用例。
+- Files Reviewed:
+  - `src/memory_cluster/compress.py`
+  - `tests/test_conflict_semantics.py`
+  - `tests/test_edge_cases.py`
+  - `scripts/run_ablation.py`
+  - `docs/eval/ablation_report_cn.md`
+  - `docs/eval/ablation_report_large_cn.md`
+  - `docs/eval/ablation_report_stress_cn.md`
+- Files Changed:
+  - `src/memory_cluster/compress.py`
+  - `tests/test_conflict_semantics.py`
+  - `tests/test_edge_cases.py`
+  - `scripts/run_ablation.py`
+  - `docs/eval/ablation_report_cn.md`
+  - `docs/eval/ablation_report_large_cn.md`
+  - `docs/eval/ablation_report_stress_cn.md`
+  - `.claude.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] P1-1 正则优先级修复
+  - [x] P2-1 flag 作用域污染修复
+  - [x] P2-2 作用域内否定语义保留
+  - [x] P2-3 中文语义测试补齐
+  - [x] P2-4 消融报告 summary 可读化
+  - [x] 全量测试通过（35/35）
+  - [x] 编译检查通过
+
+## Entry R-010-DeepReview
+- Timestamp: 2026-02-10 ~23:30 +08:00
+- Stage: Stage 1 + Stage 2 综合深度评估
+- Reviewer: Claude Opus 4.6
+- Actions:
+  - 拉取并验证 d5738b6 全量代码
+  - 深度审查 compress.py 冲突语义增强（4 新正则 + masked_spans）
+  - 验证 test_conflict_semantics.py (3 tests)
+  - 验证 run_ablation.py 参数化 + 100 样本生成
+  - 交叉验证 3 套消融实验 + prune 对照实验数据
+  - 运行 31/31 测试通过 + compileall 通过
+  - 发现 P1-1 正则 alternation order bug 并实测验证
+  - 撰写综合深度评估报告
+- Files Reviewed:
+  - src/memory_cluster/compress.py (381 lines)
+  - tests/test_conflict_semantics.py (46 lines)
+  - scripts/run_ablation.py (447 lines)
+  - docs/eval/ablation_report_cn.md
+  - docs/eval/ablation_report_large_cn.md
+  - docs/eval/ablation_report_stress_cn.md
+  - docs/eval/prune_benchmark_report.md
+  - docs/FINAL_REPORT.md
+  - docs/design/next_phase_plan.md
+- Files Changed:
+  - docs/review/r010_stage1_stage2_deep_review.md (NEW)
+  - .claude.md (R-010 entry added)
+  - WORK_PROGRESS.md (this entry)
+- Key Findings:
+  - P1-1: NEGATED_KEY_VALUE_PATTERN alternation order bug (中文否定)
+  - P2-1: Flag patterns ignore masked_spans
+  - P2-2: Negation-in-scope semantic loss
+  - P2-3: No Chinese test coverage
+  - P2-4: Ablation report Summary raw JSON
+- Overall Rating: B+ (P1 fix required before next stage)
+- Review Checklist:
+  - [x] 31/31 tests pass
+  - [x] compileall pass
+  - [x] Regex behavior verified with manual tests
+  - [x] Experiment data cross-validated
+  - [x] Comprehensive review written to docs/review/
+  - [x] .claude.md updated with R-010 entry

@@ -5,7 +5,7 @@
 ## 1. 当前状态
 - 已完成并验证：CEG / ARB / DMG + Merge Upper-Bound Prune。
 - 已完成并验证：冲突语义增强（否定、条件、反事实 slot 提取）。
-- 单元测试：31/31 通过。
+- 单元测试：35/35 通过。
 - 已形成 3 套可复现实验：
   - 小样本消融：`outputs/ablation_metrics.json`
   - 100 样本 realistic 消融：`outputs/ablation_metrics_large.json`

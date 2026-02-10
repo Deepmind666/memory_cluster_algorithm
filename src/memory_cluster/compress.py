@@ -11,7 +11,7 @@ from .preference import PreferenceDecision, PreferencePolicyEngine
 
 KEY_VALUE_PATTERN = re.compile(r"([A-Za-z_\u4e00-\u9fff][\w\u4e00-\u9fff]{0,32})\s*[:=：]\s*([^\s,;，；]{1,64})")
 NEGATED_KEY_VALUE_PATTERN = re.compile(
-    r"(?:不|非|不是|并非)\s*([A-Za-z_\u4e00-\u9fff][\w\u4e00-\u9fff]{0,32})\s*[:=：]?\s*([^\s,;，；]{1,64})",
+    r"(?:不是|并非|不|非)\s*([A-Za-z_\u4e00-\u9fff][\w\u4e00-\u9fff]{0,32})\s*[:=：]?\s*([^\s,;，；]{1,64})",
     re.IGNORECASE,
 )
 NOT_EQUAL_PATTERN = re.compile(
@@ -62,21 +62,85 @@ def _extract_slot_values(fragment: MemoryFragment) -> list[tuple[str, str]]:
                 return True
         return False
 
+    def _add_flag_pairs_from_text(
+        text: str,
+        *,
+        offset: int = 0,
+        slot_prefix: str = "",
+        local_mask_spans: list[tuple[int, int]] | None = None,
+    ) -> None:
+        neg_spans: list[tuple[int, int]] = []
+        for pattern in (NEGATIVE_FLAG_PATTERN, NEGATIVE_FLAG_EN_PATTERN):
+            for match in pattern.finditer(text):
+                start = offset + match.start()
+                end = offset + match.end()
+                if _in_masked_spans(start, end):
+                    continue
+                flag_name = match.group(1).strip().lower()
+                pairs.append((f"{slot_prefix}flag:{flag_name}", "false"))
+                neg_spans.append((start, end))
+
+        for pattern in (POSITIVE_FLAG_PATTERN, POSITIVE_FLAG_EN_PATTERN):
+            for match in pattern.finditer(text):
+                start = offset + match.start()
+                end = offset + match.end()
+                if _in_masked_spans(start, end):
+                    continue
+                skip = False
+                for left, right in neg_spans:
+                    if start >= left and end <= right:
+                        skip = True
+                        break
+                if skip:
+                    continue
+                flag_name = match.group(1).strip().lower()
+                pairs.append((f"{slot_prefix}flag:{flag_name}", "true"))
+
+        if local_mask_spans is not None:
+            local_mask_spans.extend(neg_spans)
+
     for pattern, slot_prefix in (
         (CONDITIONAL_SCOPE_PATTERN, "cond:"),
         (COUNTERFACTUAL_SCOPE_PATTERN, "cf:"),
     ):
         for match in pattern.finditer(content):
             scoped_text = (match.group(1) or "").strip()
-            if scoped_text:
-                masked_spans.append((match.start(1), match.end(1)))
+            scoped_span_start = match.start(1)
+            scoped_span_end = match.end(1)
+            scoped_mask_spans: list[tuple[int, int]] = []
+            for scoped in (NEGATED_KEY_VALUE_PATTERN, NOT_EQUAL_PATTERN):
+                for scoped_match in scoped.finditer(scoped_text):
+                    slot = scoped_match.group(1).strip()
+                    value = _clean_value(scoped_match.group(2))
+                    scoped_mask_spans.append(
+                        (
+                            scoped_span_start + scoped_match.start(),
+                            scoped_span_start + scoped_match.end(),
+                        )
+                    )
+                    pairs.append((f"{slot_prefix}{slot}", f"!{value}"))
             for scoped in KEY_VALUE_PATTERN.finditer(scoped_text):
+                scoped_start = scoped_span_start + scoped.start()
+                scoped_end = scoped_span_start + scoped.end()
+                if _in_masked_spans(scoped_start, scoped_end):
+                    continue
                 slot = scoped.group(1).strip()
                 value = _clean_value(scoped.group(2))
                 pairs.append((f"{slot_prefix}{slot}", value))
+            _add_flag_pairs_from_text(
+                scoped_text,
+                offset=scoped_span_start,
+                slot_prefix=slot_prefix,
+                local_mask_spans=scoped_mask_spans,
+            )
+            masked_spans.extend(scoped_mask_spans)
+            if scoped_text:
+                masked_spans.append((scoped_span_start, scoped_span_end))
 
     for pattern in (NEGATED_KEY_VALUE_PATTERN, NOT_EQUAL_PATTERN):
         for match in pattern.finditer(content):
+            if _in_masked_spans(match.start(), match.end()):
+                continue
             slot = match.group(1).strip()
             value = _clean_value(match.group(2))
             masked_spans.append((match.start(), match.end()))
@@ -100,19 +164,7 @@ def _extract_slot_values(fragment: MemoryFragment) -> list[tuple[str, str]]:
             normalized = "true" if bool(value) else "false"
             pairs.append((f"flag:{str(key).strip().lower()}", normalized))
 
-    for match in NEGATIVE_FLAG_PATTERN.finditer(content):
-        flag_name = match.group(1).strip().lower()
-        pairs.append((f"flag:{flag_name}", "false"))
-    for match in NEGATIVE_FLAG_EN_PATTERN.finditer(content):
-        flag_name = match.group(1).strip().lower()
-        pairs.append((f"flag:{flag_name}", "false"))
-
-    for match in POSITIVE_FLAG_PATTERN.finditer(content):
-        flag_name = match.group(1).strip().lower()
-        pairs.append((f"flag:{flag_name}", "true"))
-    for match in POSITIVE_FLAG_EN_PATTERN.finditer(content):
-        flag_name = match.group(1).strip().lower()
-        pairs.append((f"flag:{flag_name}", "true"))
+    _add_flag_pairs_from_text(content)
 
     return pairs
 

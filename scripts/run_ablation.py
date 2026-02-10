@@ -436,7 +436,31 @@ def main() -> int:
                     f"merges_blocked_by_guard={metrics.get('merges_blocked_by_guard')}",
                 ]
             )
-        lines.extend(["", "## Summary", f"- {json.dumps(summary, ensure_ascii=False)}", ""])
+        lines.extend(
+            [
+                "",
+                "## Summary",
+                f"- ceg_top1_conflict_priority_gain: {(summary.get('ceg') or {}).get('top1_conflict_priority_gain')}",
+                f"- ceg_conflict_priority_avg_gain: {(summary.get('ceg') or {}).get('conflict_priority_avg_gain')}",
+                f"- arb_detail_budget_avg_gain: {(summary.get('arb') or {}).get('detail_budget_avg_gain')}",
+                f"- arb_avg_summary_chars_gain: {(summary.get('arb') or {}).get('avg_summary_chars_gain')}",
+                f"- dmg_mixed_mode_clusters_reduction: {(summary.get('dmg') or {}).get('mixed_mode_clusters_reduction')}",
+                f"- dmg_merge_block_gain: {(summary.get('dmg') or {}).get('merge_block_gain')}",
+                f"- dmg_cluster_count_delta: {(summary.get('dmg') or {}).get('cluster_count_delta')}",
+                f"- full_mixed_mode_clusters_reduction_vs_baseline: {(summary.get('full') or {}).get('mixed_mode_clusters_reduction_vs_baseline')}",
+                f"- full_detail_budget_avg_gain_vs_baseline: {(summary.get('full') or {}).get('detail_budget_avg_gain_vs_baseline')}",
+                f"- full_merge_block_gain_vs_baseline: {(summary.get('full') or {}).get('merge_block_gain_vs_baseline')}",
+                f"- sanity_baseline_cluster_count: {(summary.get('sanity_checks') or {}).get('baseline_cluster_count')}",
+                f"- sanity_full_cluster_count: {(summary.get('sanity_checks') or {}).get('full_cluster_count')}",
+                f"- sanity_baseline_conflict_count: {(summary.get('sanity_checks') or {}).get('baseline_conflict_count')}",
+                f"- sanity_full_conflict_count: {(summary.get('sanity_checks') or {}).get('full_conflict_count')}",
+                f"- mixed_mode_clusters_reduction: {summary.get('mixed_mode_clusters_reduction')}",
+                "",
+                "## Summary (Raw JSON)",
+                f"- {json.dumps(summary, ensure_ascii=False)}",
+                "",
+            ]
+        )
         report_path.write_text("\n".join(lines), encoding="utf-8")
 
     print(json.dumps(payload, ensure_ascii=False, indent=2))
