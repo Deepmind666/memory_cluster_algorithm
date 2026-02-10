@@ -45,6 +45,7 @@ python scripts/run_ablation.py --output outputs/ablation_metrics_large.json --re
 python scripts/run_ablation.py --output outputs/ablation_metrics_stress.json --report docs/eval/ablation_report_stress_cn.md --fragment-count 100 --similarity-threshold 1.1 --merge-threshold 0.05 --dataset-label synthetic_conflict_memory_case_stress
 python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
 python scripts/run_candidate_filter_benchmark.py --output outputs/candidate_filter_benchmark.json --report docs/eval/candidate_filter_benchmark_report.md
+python scripts/run_semantic_regression.py --output outputs/semantic_regression_metrics.json --report docs/eval/semantic_regression_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
@@ -53,6 +54,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 - 输入 JSONL 默认容错（坏行跳过并统计），可用 `--strict-input` 改为遇错即失败。
 - `build` 读取存储默认容错（坏行跳过并统计），可用 `--strict-store` 改为遇错即失败。
 - 候选筛选默认关闭（exact 模式）；仅在大规模性能场景按需开启 `--enable-merge-candidate-filter`。
+- 建议每次规则改动后执行 `run_semantic_regression.py`，验证条件边界、否定窗口、跨句指代不回归。
 
 ## 进展与质量门禁
 - 进展日志：`WORK_PROGRESS.md`

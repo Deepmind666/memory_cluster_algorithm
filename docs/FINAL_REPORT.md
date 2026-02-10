@@ -18,6 +18,7 @@
 - [x] 消融实验脚本与报告（baseline/ceg/arb/dmg/full）
 - [x] 存储可靠性增强（ingest 幂等 + JSONL 容错加载）
 - [x] 冲突语义增强（否定/条件/反事实 slot 抽取）
+- [x] 语义精度回归（条件后件隔离 + 双重否定窗口 + 跨句指代回指）
 
 ## 2. 核心命令
 ```powershell
@@ -30,13 +31,14 @@ python scripts/run_ablation.py --output outputs/ablation_metrics_large.json --re
 python scripts/run_ablation.py --output outputs/ablation_metrics_stress.json --report docs/eval/ablation_report_stress_cn.md --fragment-count 100 --similarity-threshold 1.1 --merge-threshold 0.05 --dataset-label synthetic_conflict_memory_case_stress
 python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
 python scripts/run_candidate_filter_benchmark.py --output outputs/candidate_filter_benchmark.json --report docs/eval/candidate_filter_benchmark_report.md
+python scripts/run_semantic_regression.py --output outputs/semantic_regression_metrics.json --report docs/eval/semantic_regression_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：38/38 通过
+- 结果：44/44 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
 - `avg_ms`: 2.503
@@ -118,12 +120,20 @@ python -m unittest discover -s tests -p "test_*.py" -v
   - `cluster_count_equal=true`
   - `merges_applied` 与 baseline 一致（21）
 
+### 3.7 语义精度回归（semantic_precision_regression_v1）
+来源：`outputs/semantic_regression_metrics.json`
+
+- 覆盖样例：8 条（条件边界、英文否定、双重否定 flag、英文/中文跨句指代、条件作用域指代、反事实否定、条件 flag 隔离）
+- `case_pass_rate=1.0`（8/8）
+- `expected_hit_rate=1.0`（17/17 目标对命中）
+- `forbidden_violations=0`（6/6 误报约束零触发）
+
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 38 条）
+- 测试：`tests/`（当前 44 条）
 - 数据：`data/examples/`
-- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`
-- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`
+- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`, `scripts/run_semantic_regression.py`
+- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`, `docs/eval/semantic_regression_report.md`
 - 规格：`docs/design/algorithm_spec.md`, `docs/design/algorithm_spec_detailed.md`
 - 快申计划：`docs/design/cn_fast_track_patent_plan.md`
 - 专利草案：`docs/patent_kit/`
@@ -131,7 +141,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 ## 5. 当前主要风险
 1. 大规模性能风险：当前通过上界剪枝降低常见场景成本，但最坏复杂度仍为 O(k^2)，后续仍需 ANN/桶化优化。
-2. 冲突语义风险：已支持否定/条件/反事实抽取，但自然语言长句与跨句指代仍需增强。
+2. 冲突语义风险：已补齐跨句指代和否定窗口误报回归，但长句多重嵌套条件仍需持续扩展测试集。
 3. 指标解释风险：DMG 会改变簇结构，需按业务目标解释“冲突减少 vs 合并减少”的取舍。
 
 ## 6. 非法律声明

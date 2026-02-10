@@ -1116,3 +1116,42 @@
   - [x] P2-1/P2-2/P2-3/P2-4 全部验证通过
   - [x] 35/35 tests pass
   - [x] .claude.md updated with R-010b
+
+## Entry R-016
+- Timestamp: 2026-02-11 01:00:30 +08:00
+- Stage: 语义精度回归推进（规则增强 + 回归证据）
+- Actions:
+  - `compress.py` 新增语义规则增强：
+    - 条件后件截断（`then/则/那么` 后不进入 `cond:*`）
+    - 英文否定 `not key=value` 提取
+    - 双重否定窗口保护（如 `do not disable cache`）
+    - 跨句指代槽位回指（`it/this/that/它/其/该参数`）
+  - 新增回归单测：`tests/test_semantic_precision_regression.py`（6 条）
+  - 新增回归脚本：`scripts/run_semantic_regression.py`
+  - 生成回归证据：
+    - `outputs/semantic_regression_metrics.json`
+    - `docs/eval/semantic_regression_report.md`
+  - 更新文档：`README.md`、`docs/FINAL_REPORT.md`、`docs/design/next_phase_plan.md`
+- Files Reviewed:
+  - `src/memory_cluster/compress.py`
+  - `tests/test_semantic_precision_regression.py`
+  - `scripts/run_semantic_regression.py`
+  - `docs/eval/semantic_regression_report.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `README.md`
+- Files Changed:
+  - `src/memory_cluster/compress.py`
+  - `tests/test_semantic_precision_regression.py`
+  - `scripts/run_semantic_regression.py`
+  - `docs/eval/semantic_regression_report.md`
+  - `README.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 新增语义规则均有测试覆盖
+  - [x] 语义回归脚本输出 JSON 与 Markdown 报告
+  - [x] 全量单测通过（44/44）
+  - [x] compileall 通过
+  - [x] 关键指标可追溯（8/8 case, forbidden_violations=0）
