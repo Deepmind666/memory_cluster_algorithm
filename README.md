@@ -37,7 +37,7 @@ python -m pip install -r requirements.txt
 python -m src.memory_cluster.cli ingest --input data/examples/multi_agent_memory_fragments.jsonl --store outputs/memory_store.jsonl
 python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85
 python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_l2.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --enable-l2-clusters --l2-min-children 2
-python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-merge-upper-bound-prune --merge-prune-dims 48 --enable-merge-candidate-filter --merge-candidate-bucket-dims 10 --merge-candidate-max-neighbors 16 --enable-l2-clusters --l2-min-children 2
+python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-merge-upper-bound-prune --merge-prune-dims 48 --enable-merge-candidate-filter --merge-candidate-bucket-dims 10 --merge-candidate-max-neighbors 16 --enable-merge-ann-candidates --merge-ann-num-tables 6 --merge-ann-bits-per-table 10 --merge-ann-probe-radius 1 --merge-ann-max-neighbors 48 --merge-ann-score-dims 48 --enable-l2-clusters --l2-min-children 2
 python -m src.memory_cluster.cli query --state outputs/cluster_state.json --query "alpha 冲突参数" --top-k 3 --offset 0 --expand
 python -m src.memory_cluster.cli query --state outputs/cluster_state_l2.json --query "method topic" --top-k 3 --cluster-level l2 --expand
 python scripts/run_ablation.py --output outputs/ablation_metrics.json --report docs/eval/ablation_report_cn.md
@@ -45,6 +45,7 @@ python scripts/run_ablation.py --output outputs/ablation_metrics_large.json --re
 python scripts/run_ablation.py --output outputs/ablation_metrics_stress.json --report docs/eval/ablation_report_stress_cn.md --fragment-count 100 --similarity-threshold 1.1 --merge-threshold 0.05 --dataset-label synthetic_conflict_memory_case_stress
 python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
 python scripts/run_candidate_filter_benchmark.py --output outputs/candidate_filter_benchmark.json --report docs/eval/candidate_filter_benchmark_report.md
+python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md
 python scripts/run_semantic_regression.py --output outputs/semantic_regression_metrics.json --report docs/eval/semantic_regression_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
@@ -54,6 +55,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 - 输入 JSONL 默认容错（坏行跳过并统计），可用 `--strict-input` 改为遇错即失败。
 - `build` 读取存储默认容错（坏行跳过并统计），可用 `--strict-store` 改为遇错即失败。
 - 候选筛选默认关闭（exact 模式）；仅在大规模性能场景按需开启 `--enable-merge-candidate-filter`。
+- ANN 候选默认关闭；开启参数为 `--enable-merge-ann-candidates` 及 `--merge-ann-*`，当前为实验特性，需配合 benchmark 验证收益。
 - 建议每次规则改动后执行 `run_semantic_regression.py`，验证条件边界、否定窗口、跨句指代不回归。
 
 ## 进展与质量门禁

@@ -153,6 +153,12 @@ class PreferenceConfig:
     enable_merge_candidate_filter: bool = False
     merge_candidate_bucket_dims: int = 10
     merge_candidate_max_neighbors: int = 16
+    enable_merge_ann_candidates: bool = False
+    merge_ann_num_tables: int = 4
+    merge_ann_bits_per_table: int = 8
+    merge_ann_probe_radius: int = 0
+    merge_ann_max_neighbors: int = 24
+    merge_ann_score_dims: int = 32
     hard_keep_tags: list[str] = field(default_factory=list)
     protected_path_prefixes: list[str] = field(default_factory=list)
     protected_scopes: list[str] = field(default_factory=lambda: ["global_task", "current_task"])
@@ -185,6 +191,12 @@ class PreferenceConfig:
             enable_merge_candidate_filter=bool(data.get("enable_merge_candidate_filter", False)),
             merge_candidate_bucket_dims=max(1, int(data.get("merge_candidate_bucket_dims", 10))),
             merge_candidate_max_neighbors=max(1, int(data.get("merge_candidate_max_neighbors", 16))),
+            enable_merge_ann_candidates=bool(data.get("enable_merge_ann_candidates", False)),
+            merge_ann_num_tables=max(1, int(data.get("merge_ann_num_tables", 4))),
+            merge_ann_bits_per_table=max(1, int(data.get("merge_ann_bits_per_table", 8))),
+            merge_ann_probe_radius=max(0, min(1, int(data.get("merge_ann_probe_radius", 0)))),
+            merge_ann_max_neighbors=max(1, int(data.get("merge_ann_max_neighbors", 24))),
+            merge_ann_score_dims=max(1, int(data.get("merge_ann_score_dims", 32))),
             hard_keep_tags=[str(x) for x in (data.get("hard_keep_tags") or [])],
             protected_path_prefixes=[str(x) for x in (data.get("protected_path_prefixes") or [])],
             protected_scopes=[str(x) for x in (data.get("protected_scopes") or ["global_task", "current_task"])],

@@ -1155,3 +1155,48 @@
   - [x] 全量单测通过（44/44）
   - [x] compileall 通过
   - [x] 关键指标可追溯（8/8 case, forbidden_violations=0）
+
+## Entry R-017
+- Timestamp: 2026-02-11 01:09:18 +08:00
+- Stage: 第二阶段推进（ANN 混合候选 + 三方对照实验）
+- Actions:
+  - 新增 ANN 候选开关与参数链路（models/pipeline/cli/cluster 全链路接入）。
+  - `cluster.py` 增加 ANN 多表签名候选构建，并支持 candidate/ann/hybrid 三种门控模式。
+  - 新增指标：
+    - `merge_pairs_skipped_by_ann_candidates`
+    - `merge_pairs_skipped_by_hybrid_candidates`
+  - 新增测试：`tests/test_merge_ann_candidates.py`（3 条）
+  - 新增 benchmark：`scripts/run_ann_hybrid_benchmark.py`
+  - 生成实验证据：
+    - `outputs/ann_hybrid_benchmark.json`
+    - `docs/eval/ann_hybrid_benchmark_report.md`
+  - 更新文档：`README.md`、`docs/FINAL_REPORT.md`、`docs/design/next_phase_plan.md`
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/run_ann_hybrid_benchmark.py`
+  - `docs/eval/ann_hybrid_benchmark_report.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `README.md`
+- Files Changed:
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/models.py`
+  - `src/memory_cluster/pipeline.py`
+  - `src/memory_cluster/cli.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/run_ann_hybrid_benchmark.py`
+  - `docs/eval/ann_hybrid_benchmark_report.md`
+  - `README.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 全量单测通过（47/47）
+  - [x] compileall 通过
+  - [x] ANN 三方对照实验可复现并产出报告
+  - [x] 质量门槛可审计（cluster/merge/conflict 一致性）
+  - [x] 第二阶段结论已落地文档（ANN 默认关闭，candidate+prune 推荐）

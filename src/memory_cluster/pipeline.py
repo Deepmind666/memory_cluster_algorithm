@@ -179,6 +179,12 @@ def build_cluster_result(
         enable_merge_candidate_filter=pref.enable_merge_candidate_filter,
         merge_candidate_bucket_dims=pref.merge_candidate_bucket_dims,
         merge_candidate_max_neighbors=pref.merge_candidate_max_neighbors,
+        enable_merge_ann_candidates=pref.enable_merge_ann_candidates,
+        merge_ann_num_tables=pref.merge_ann_num_tables,
+        merge_ann_bits_per_table=pref.merge_ann_bits_per_table,
+        merge_ann_probe_radius=pref.merge_ann_probe_radius,
+        merge_ann_max_neighbors=pref.merge_ann_max_neighbors,
+        merge_ann_score_dims=pref.merge_ann_score_dims,
     )
 
     clusters: list[MemoryCluster] = []

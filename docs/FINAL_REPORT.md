@@ -15,6 +15,7 @@
 - [x] DMG（双通道合并门控）
 - [x] Merge Upper-Bound Prune（安全上界剪枝）
 - [x] Merge Candidate Filter（候选筛选降耗，默认关闭）
+- [x] ANN Hybrid Candidates（多表近似候选，默认关闭）
 - [x] 消融实验脚本与报告（baseline/ceg/arb/dmg/full）
 - [x] 存储可靠性增强（ingest 幂等 + JSONL 容错加载）
 - [x] 冲突语义增强（否定/条件/反事实 slot 抽取）
@@ -31,6 +32,7 @@ python scripts/run_ablation.py --output outputs/ablation_metrics_large.json --re
 python scripts/run_ablation.py --output outputs/ablation_metrics_stress.json --report docs/eval/ablation_report_stress_cn.md --fragment-count 100 --similarity-threshold 1.1 --merge-threshold 0.05 --dataset-label synthetic_conflict_memory_case_stress
 python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
 python scripts/run_candidate_filter_benchmark.py --output outputs/candidate_filter_benchmark.json --report docs/eval/candidate_filter_benchmark_report.md
+python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md
 python scripts/run_semantic_regression.py --output outputs/semantic_regression_metrics.json --report docs/eval/semantic_regression_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
@@ -38,7 +40,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：44/44 通过
+- 结果：47/47 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
 - `avg_ms`: 2.503
@@ -128,19 +130,39 @@ python -m unittest discover -s tests -p "test_*.py" -v
 - `expected_hit_rate=1.0`（17/17 目标对命中）
 - `forbidden_violations=0`（6/6 误报约束零触发）
 
+### 3.8 ANN Hybrid 对照实验（synthetic_ann_hybrid_case）
+来源：`outputs/ann_hybrid_benchmark.json`
+
+- 参数：`prune_dims=48`, `bucket_dims=10`, `candidate_max_neighbors=24`, `ann_num_tables=6`, `ann_bits_per_table=10`, `ann_probe_radius=1`, `ann_max_neighbors=48`
+- 质量门槛：所有变体均满足 `cluster_count_equal=true`、`merges_applied_equal=true`、`conflict_count_equal=true`
+
+- sparse_no_merge_case（`2.0/0.95`）：
+  - `prune_only`: `avg_speedup_ratio=19.7754%`
+  - `candidate_prune`: `avg_speedup_ratio=37.8138%`（本场景最佳）
+  - `ann_prune`: `avg_speedup_ratio=11.3727%`
+  - `hybrid_prune`: `avg_speedup_ratio=10.1826%`
+
+- merge_active_case（`0.82/0.85`）：
+  - `candidate_prune`: `avg_speedup_ratio=16.0152%`（本场景最佳）
+  - `prune_only`: `avg_speedup_ratio=-2.3038%`
+  - `ann_prune`: `avg_speedup_ratio=-16.0874%`
+  - `hybrid_prune`: `avg_speedup_ratio=-17.9044%`
+
+- 结论：ANN 候选在当前实现与参数下未稳定优于 candidate filter，因此保持默认关闭，后续以参数调优和更轻量索引结构继续优化。
+
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 44 条）
+- 测试：`tests/`（当前 47 条）
 - 数据：`data/examples/`
-- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`, `scripts/run_semantic_regression.py`
-- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`, `docs/eval/semantic_regression_report.md`
+- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`, `scripts/run_ann_hybrid_benchmark.py`, `scripts/run_semantic_regression.py`
+- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`, `docs/eval/ann_hybrid_benchmark_report.md`, `docs/eval/semantic_regression_report.md`
 - 规格：`docs/design/algorithm_spec.md`, `docs/design/algorithm_spec_detailed.md`
 - 快申计划：`docs/design/cn_fast_track_patent_plan.md`
 - 专利草案：`docs/patent_kit/`
 - 进展日志：`WORK_PROGRESS.md`
 
 ## 5. 当前主要风险
-1. 大规模性能风险：当前通过上界剪枝降低常见场景成本，但最坏复杂度仍为 O(k^2)，后续仍需 ANN/桶化优化。
+1. 大规模性能风险：当前通过上界剪枝与候选筛选降低常见场景成本，但最坏复杂度仍为 O(k^2)，ANN 方案在 active 场景尚未达到稳定正收益。
 2. 冲突语义风险：已补齐跨句指代和否定窗口误报回归，但长句多重嵌套条件仍需持续扩展测试集。
 3. 指标解释风险：DMG 会改变簇结构，需按业务目标解释“冲突减少 vs 合并减少”的取舍。
 
