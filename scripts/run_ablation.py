@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timedelta, timezone
 import json
 import sys
 from pathlib import Path
@@ -16,8 +17,8 @@ from src.memory_cluster.pipeline import build_cluster_result
 from src.memory_cluster.retrieve import MemoryRetriever
 
 
-def synthetic_fragments() -> list[MemoryFragment]:
-    rows = [
+def _base_fragments() -> list[MemoryFragment]:
+    return [
         MemoryFragment(
             id="ab01",
             agent_id="planner_agent",
@@ -100,6 +101,110 @@ def synthetic_fragments() -> list[MemoryFragment]:
             meta={"file_path": "docs/patent_kit/05_具体实施方式.md"},
         ),
     ]
+
+
+def synthetic_fragments(fragment_count: int = 9) -> list[MemoryFragment]:
+    base = _base_fragments()
+    target = max(1, int(fragment_count))
+    if target <= len(base):
+        return base[:target]
+
+    rows = list(base)
+    start = datetime(2026, 2, 9, 9, 11, tzinfo=timezone.utc)
+    mode_values = ["fast", "safe", "balanced"]
+    alpha_values = ["0.7", "0.2", "0.4"]
+    agents = ["planner_agent", "writer_agent", "verifier_agent"]
+
+    for idx in range(len(base) + 1, target + 1):
+        offset = idx - len(base) - 1
+        ts = (start + timedelta(minutes=offset)).isoformat()
+        mode = mode_values[offset % len(mode_values)]
+        alpha = alpha_values[(offset * 2) % len(alpha_values)]
+        agent_id = agents[offset % len(agents)]
+        cid = f"ab{idx:04d}"
+
+        if offset % 6 == 0:
+            rows.append(
+                MemoryFragment(
+                    id=cid,
+                    agent_id=agent_id,
+                    timestamp=ts,
+                    content=f"如果 mode={mode} 则提升吞吐，但本应 mode=safe 保持稳定。",
+                    type="draft",
+                    tags={"category": "method"},
+                    meta={"slots": {"mode": mode}},
+                )
+            )
+            continue
+
+        if offset % 6 == 1:
+            rows.append(
+                MemoryFragment(
+                    id=cid,
+                    agent_id=agent_id,
+                    timestamp=ts,
+                    content=f"alpha != {alpha} is risky for this replay window.",
+                    type="result",
+                    tags={"category": "evidence"},
+                    meta={"slots": {"alpha": alpha}},
+                )
+            )
+            continue
+
+        if offset % 6 == 2:
+            rows.append(
+                MemoryFragment(
+                    id=cid,
+                    agent_id=agent_id,
+                    timestamp=ts,
+                    content=f"Parser strategy mode {mode} with alpha={alpha} for mixed traffic.",
+                    type="draft",
+                    tags={"category": "method"},
+                    meta={"slots": {"mode": mode, "alpha": alpha}},
+                )
+            )
+            continue
+
+        if offset % 6 == 3:
+            rows.append(
+                MemoryFragment(
+                    id=cid,
+                    agent_id=agent_id,
+                    timestamp=ts,
+                    content=f"Old noisy log line {idx} for parser benchmark replay.",
+                    type="log",
+                    tags={"category": "noise"},
+                    meta={"file_path": f"logs/run_{idx}.log"},
+                )
+            )
+            continue
+
+        if offset % 6 == 4:
+            rows.append(
+                MemoryFragment(
+                    id=cid,
+                    agent_id=agent_id,
+                    timestamp=ts,
+                    content=f"Counterfactual: should have alpha={alpha} if latency spikes.",
+                    type="result",
+                    tags={"category": "evidence"},
+                    meta={"slots": {"alpha": alpha}},
+                )
+            )
+            continue
+
+        rows.append(
+            MemoryFragment(
+                id=cid,
+                agent_id=agent_id,
+                timestamp=ts,
+                content=f"Global task checkpoint {idx}: preserve conflict chain and key evidence.",
+                type="policy",
+                tags={"category": "preference", "global_task": "1"},
+                meta={"file_path": "docs/patent_kit/05_具体实施方式.md"},
+            )
+        )
+
     return rows
 
 
@@ -128,12 +233,18 @@ def _scenario_pref(base: PreferenceConfig, overrides: dict[str, Any]) -> Prefere
     return PreferenceConfig.from_dict(payload)
 
 
-def run_scenario(name: str, pref: PreferenceConfig, fragments: list[MemoryFragment]) -> dict[str, Any]:
+def run_scenario(
+    name: str,
+    pref: PreferenceConfig,
+    fragments: list[MemoryFragment],
+    similarity_threshold: float,
+    merge_threshold: float,
+) -> dict[str, Any]:
     result = build_cluster_result(
         fragments=fragments,
         preference_config=pref,
-        similarity_threshold=1.1,
-        merge_threshold=0.05,
+        similarity_threshold=similarity_threshold,
+        merge_threshold=merge_threshold,
     )
     retriever = MemoryRetriever(HashEmbeddingProvider(dim=256))
     state = result.to_dict()
@@ -160,6 +271,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run ablation study for CEG/ARB/DMG")
     parser.add_argument("--output", required=True)
     parser.add_argument("--report", required=False)
+    parser.add_argument("--fragment-count", type=int, default=9)
+    parser.add_argument("--similarity-threshold", type=float, default=1.1)
+    parser.add_argument("--merge-threshold", type=float, default=0.05)
+    parser.add_argument("--dataset-label", default="synthetic_conflict_memory_case")
     args = parser.parse_args()
 
     base_pref = PreferenceConfig.from_dict(
@@ -184,19 +299,42 @@ def main() -> int:
         }
     )
 
-    fragments = synthetic_fragments()
+    fragments = synthetic_fragments(fragment_count=args.fragment_count)
     scenarios = [
-        ("baseline", {"enable_conflict_graph": False, "enable_adaptive_budget": False, "enable_dual_merge_guard": False}),
-        ("ceg", {"enable_conflict_graph": True, "enable_adaptive_budget": False, "enable_dual_merge_guard": False}),
-        ("arb", {"enable_conflict_graph": False, "enable_adaptive_budget": True, "enable_dual_merge_guard": False}),
-        ("dmg", {"enable_conflict_graph": False, "enable_adaptive_budget": False, "enable_dual_merge_guard": True}),
-        ("full", {"enable_conflict_graph": True, "enable_adaptive_budget": True, "enable_dual_merge_guard": True}),
+        (
+            "baseline",
+            {"enable_conflict_graph": False, "enable_adaptive_budget": False, "enable_dual_merge_guard": False},
+        ),
+        (
+            "ceg",
+            {"enable_conflict_graph": True, "enable_adaptive_budget": False, "enable_dual_merge_guard": False},
+        ),
+        (
+            "arb",
+            {"enable_conflict_graph": False, "enable_adaptive_budget": True, "enable_dual_merge_guard": False},
+        ),
+        (
+            "dmg",
+            {"enable_conflict_graph": False, "enable_adaptive_budget": False, "enable_dual_merge_guard": True},
+        ),
+        (
+            "full",
+            {"enable_conflict_graph": True, "enable_adaptive_budget": True, "enable_dual_merge_guard": True},
+        ),
     ]
 
     rows: list[dict[str, Any]] = []
     for name, overrides in scenarios:
         pref = _scenario_pref(base_pref, overrides)
-        rows.append(run_scenario(name=name, pref=pref, fragments=fragments))
+        rows.append(
+            run_scenario(
+                name=name,
+                pref=pref,
+                fragments=fragments,
+                similarity_threshold=float(args.similarity_threshold),
+                merge_threshold=float(args.merge_threshold),
+            )
+        )
 
     by_name = {row["scenario"]: row for row in rows}
     baseline = by_name.get("baseline", {})
@@ -259,7 +397,11 @@ def main() -> int:
     }
 
     payload = {
-        "dataset": "synthetic_conflict_memory_case",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "dataset": str(args.dataset_label),
+        "fragment_count": len(fragments),
+        "similarity_threshold": float(args.similarity_threshold),
+        "merge_threshold": float(args.merge_threshold),
         "scenarios": rows,
         "summary": summary,
     }
@@ -274,6 +416,12 @@ def main() -> int:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         lines = [
             "# Ablation Report (CN Fast-Track)",
+            "",
+            f"- generated_at: {payload.get('generated_at')}",
+            f"- dataset: {payload.get('dataset')}",
+            f"- fragment_count: {payload.get('fragment_count')}",
+            f"- similarity_threshold: {payload.get('similarity_threshold')}",
+            f"- merge_threshold: {payload.get('merge_threshold')}",
             "",
             "## Scenarios",
         ]

@@ -10,10 +10,24 @@ from .preference import PreferenceDecision, PreferencePolicyEngine
 
 
 KEY_VALUE_PATTERN = re.compile(r"([A-Za-z_\u4e00-\u9fff][\w\u4e00-\u9fff]{0,32})\s*[:=：]\s*([^\s,;，；]{1,64})")
+NEGATED_KEY_VALUE_PATTERN = re.compile(
+    r"(?:不|非|不是|并非)\s*([A-Za-z_\u4e00-\u9fff][\w\u4e00-\u9fff]{0,32})\s*[:=：]?\s*([^\s,;，；]{1,64})",
+    re.IGNORECASE,
+)
+NOT_EQUAL_PATTERN = re.compile(
+    r"([A-Za-z_\u4e00-\u9fff][\w\u4e00-\u9fff]{0,32})\s*(?:!=|≠|不等于|is\s+not)\s*([^\s,;，；]{1,64})",
+    re.IGNORECASE,
+)
 NEGATIVE_FLAG_PATTERN = re.compile(r"(?:不启用|未启用|禁用|关闭|不使用|不支持)\s*([A-Za-z0-9_\u4e00-\u9fff]{1,24})", re.IGNORECASE)
 POSITIVE_FLAG_PATTERN = re.compile(r"(?:启用|开启|使用|支持)\s*([A-Za-z0-9_\u4e00-\u9fff]{1,24})", re.IGNORECASE)
 NEGATIVE_FLAG_EN_PATTERN = re.compile(r"(?:disable|not\s+use|do\s+not\s+use)\s+([A-Za-z0-9_]{1,24})", re.IGNORECASE)
 POSITIVE_FLAG_EN_PATTERN = re.compile(r"(?:enable|use)\s+([A-Za-z0-9_]{1,24})", re.IGNORECASE)
+CONDITIONAL_SCOPE_PATTERN = re.compile(r"(?:如果|若|假如|当|if|when)\s+([^,;，；。]+)", re.IGNORECASE)
+COUNTERFACTUAL_SCOPE_PATTERN = re.compile(
+    r"(?:本应|本来|本该|理应|要是当时|如果当时|should\s+have|would\s+have)\s+([^,;，；。]+)",
+    re.IGNORECASE,
+)
+_TRAILING_VALUE_PUNCT = ".,;:!?，；。！？)]}）】>\"'"
 
 
 def _normalize_text(text: str) -> str:
@@ -32,13 +46,47 @@ def _token_jaccard(tokens_a: Iterable[str], tokens_b: Iterable[str]) -> float:
     return inter / union
 
 
+def _clean_value(raw: str) -> str:
+    text = (raw or "").strip()
+    return text.rstrip(_TRAILING_VALUE_PUNCT)
+
+
 def _extract_slot_values(fragment: MemoryFragment) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
     content = fragment.content or ""
+    masked_spans: list[tuple[int, int]] = []
+
+    def _in_masked_spans(start: int, end: int) -> bool:
+        for left, right in masked_spans:
+            if start >= left and end <= right:
+                return True
+        return False
+
+    for pattern, slot_prefix in (
+        (CONDITIONAL_SCOPE_PATTERN, "cond:"),
+        (COUNTERFACTUAL_SCOPE_PATTERN, "cf:"),
+    ):
+        for match in pattern.finditer(content):
+            scoped_text = (match.group(1) or "").strip()
+            if scoped_text:
+                masked_spans.append((match.start(1), match.end(1)))
+            for scoped in KEY_VALUE_PATTERN.finditer(scoped_text):
+                slot = scoped.group(1).strip()
+                value = _clean_value(scoped.group(2))
+                pairs.append((f"{slot_prefix}{slot}", value))
+
+    for pattern in (NEGATED_KEY_VALUE_PATTERN, NOT_EQUAL_PATTERN):
+        for match in pattern.finditer(content):
+            slot = match.group(1).strip()
+            value = _clean_value(match.group(2))
+            masked_spans.append((match.start(), match.end()))
+            pairs.append((slot, f"!{value}"))
 
     for match in KEY_VALUE_PATTERN.finditer(content):
+        if _in_masked_spans(match.start(), match.end()):
+            continue
         slot = match.group(1).strip()
-        value = match.group(2).strip()
+        value = _clean_value(match.group(2))
         pairs.append((slot, value))
 
     extra = fragment.meta.get("slots")

@@ -16,6 +16,7 @@
 - [x] Merge Upper-Bound Prune（安全上界剪枝）
 - [x] 消融实验脚本与报告（baseline/ceg/arb/dmg/full）
 - [x] 存储可靠性增强（ingest 幂等 + JSONL 容错加载）
+- [x] 冲突语义增强（否定/条件/反事实 slot 抽取）
 
 ## 2. 核心命令
 ```powershell
@@ -24,6 +25,8 @@ python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --outp
 python -m src.memory_cluster.cli query --state outputs/cluster_state_full.json --query "冲突 alpha" --top-k 3 --cluster-level all --expand
 python scripts/run_benchmark.py --input data/examples/multi_agent_memory_fragments.jsonl --preferences data/examples/preference_profile.json --output outputs/benchmark_latest.json --runs 5
 python scripts/run_ablation.py --output outputs/ablation_metrics.json --report docs/eval/ablation_report_cn.md
+python scripts/run_ablation.py --output outputs/ablation_metrics_large.json --report docs/eval/ablation_report_large_cn.md --fragment-count 100 --similarity-threshold 0.68 --merge-threshold 0.82 --dataset-label synthetic_conflict_memory_case_large
+python scripts/run_ablation.py --output outputs/ablation_metrics_stress.json --report docs/eval/ablation_report_stress_cn.md --fragment-count 100 --similarity-threshold 1.1 --merge-threshold 0.05 --dataset-label synthetic_conflict_memory_case_stress
 python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
@@ -31,7 +34,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：28/28 通过
+- 结果：31/31 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
 - `avg_ms`: 2.503
@@ -68,26 +71,41 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 - Primary（merge_active_case）设定：`fragment_count=100`, `similarity_threshold=0.82`, `merge_threshold=0.85`
 - Primary 结果：
-  - baseline（prune off）`avg_ms=13.949`
-  - optimized（prune on）`avg_ms=13.610`
-  - `avg_speedup_ratio=2.4303%`
+  - baseline（prune off）`avg_ms=19.84`
+  - optimized（prune on）`avg_ms=22.565`
+  - `avg_speedup_ratio=-13.7349%`（该场景 `merge_pairs_pruned_by_bound=0`，存在剪枝开销）
   - `cluster_count_equal=true`
   - `merge_activity_present=true`（非空洞对比）
 
 - Secondary（realistic_068_082_case）设定：`similarity_threshold=0.68`, `merge_threshold=0.82`
+  - `avg_speedup_ratio=7.3310%`
   - `merge_activity_present=false`（该场景不进入 merge 阶段）
 
 - Secondary（sparse_no_merge_case）设定：`similarity_threshold=2.0`, `merge_threshold=0.95`
-  - `avg_speedup_ratio=16.8546%`
+  - `avg_speedup_ratio=13.7943%`
   - `merge_pairs_pruned_by_bound=2519`
   - `cluster_count_equal=true`
 
+### 3.5 第二阶段大样本消融（100 fragments）
+来源：`outputs/ablation_metrics_large.json`, `outputs/ablation_metrics_stress.json`
+
+- realistic 配置（`0.68/0.82`）：
+  - baseline `cluster_count=10`, `mixed_mode_clusters=2`, `conflict_count=4`
+  - CEG 增益：`top1_conflict_priority_gain=+5.8`, `conflict_priority_avg_gain=+2.29`
+  - ARB 增益：`detail_budget_avg_gain=+38.2`, `avg_summary_chars_gain=+64.4`
+  - DMG：`merge_block_gain=0`（该参数区间未触发门控）
+
+- stress 配置（`1.1/0.05`）：
+  - baseline `cluster_count=1`, `mixed_mode_clusters=1`
+  - DMG 增益：`mixed_mode_clusters_reduction=1`, `merge_block_gain=+120`, `cluster_count_delta=+3`
+  - full 相对 baseline：`detail_budget_avg_gain_vs_baseline=+21.25`
+
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 28 条）
+- 测试：`tests/`（当前 31 条）
 - 数据：`data/examples/`
 - 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`
-- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/prune_benchmark_report.md`
+- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`
 - 规格：`docs/design/algorithm_spec.md`, `docs/design/algorithm_spec_detailed.md`
 - 快申计划：`docs/design/cn_fast_track_patent_plan.md`
 - 专利草案：`docs/patent_kit/`
@@ -95,7 +113,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 ## 5. 当前主要风险
 1. 大规模性能风险：当前通过上界剪枝降低常见场景成本，但最坏复杂度仍为 O(k^2)，后续仍需 ANN/桶化优化。
-2. 冲突语义风险：复杂否定、条件句、反事实场景还可继续增强。
+2. 冲突语义风险：已支持否定/条件/反事实抽取，但自然语言长句与跨句指代仍需增强。
 3. 指标解释风险：DMG 会改变簇结构，需按业务目标解释“冲突减少 vs 合并减少”的取舍。
 
 ## 6. 非法律声明

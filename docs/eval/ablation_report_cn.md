@@ -1,5 +1,11 @@
 # Ablation Report (CN Fast-Track)
 
+- generated_at: 2026-02-10T03:52:37.426198+00:00
+- dataset: synthetic_conflict_memory_case
+- fragment_count: 9
+- similarity_threshold: 1.1
+- merge_threshold: 0.05
+
 ## Scenarios
 - baseline: cluster_count=1, mixed_mode_clusters=1, conflict_priority_avg=0.0, detail_budget_avg=220.0, merges_blocked_by_guard=0
 - ceg: cluster_count=1, mixed_mode_clusters=1, conflict_priority_avg=8.8, detail_budget_avg=220.0, merges_blocked_by_guard=0

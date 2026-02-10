@@ -41,6 +41,8 @@ python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --outp
 python -m src.memory_cluster.cli query --state outputs/cluster_state.json --query "alpha 冲突参数" --top-k 3 --offset 0 --expand
 python -m src.memory_cluster.cli query --state outputs/cluster_state_l2.json --query "method topic" --top-k 3 --cluster-level l2 --expand
 python scripts/run_ablation.py --output outputs/ablation_metrics.json --report docs/eval/ablation_report_cn.md
+python scripts/run_ablation.py --output outputs/ablation_metrics_large.json --report docs/eval/ablation_report_large_cn.md --fragment-count 100 --similarity-threshold 0.68 --merge-threshold 0.82 --dataset-label synthetic_conflict_memory_case_large
+python scripts/run_ablation.py --output outputs/ablation_metrics_stress.json --report docs/eval/ablation_report_stress_cn.md --fragment-count 100 --similarity-threshold 1.1 --merge-threshold 0.05 --dataset-label synthetic_conflict_memory_case_stress
 python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --report docs/eval/prune_benchmark_report.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```

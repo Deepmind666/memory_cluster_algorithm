@@ -891,3 +891,86 @@
   - [x] P1-2 报告/JSON 不一致已标注
   - [x] 按 checklist §8 模板输出完整 Findings/Evidence/Gates/Fix/Risks
   - [x] 自查 SC-008 完成
+
+## Entry R-009-Review (Claude Opus)
+- Timestamp: 2026-02-10 20:00:00 +08:00
+- Stage: R-009 验证评审 — Codex R-011/R-012 审读（by Claude Opus 4.6）
+- Actions:
+  - R-008 10 项问题闭环验证：P1 全部关闭，P2 修复 4 项 / 暂缓 3 项
+  - store.py 203 行逐行审读：_FileLock (O_EXCL) + 幂等 append + 容错 read + stats
+  - time_utils.py 去重统一验证
+  - prune benchmark 3 场景数据交叉验证（primary 有真正 merge 确认）
+  - patent_kit 05/06/08 更新审读
+  - 新增测试审查（test_store_reliability 5 方法 + test_time_utils 2 方法）
+  - 28/28 测试全量运行通过
+  - 新发现 P2:1 项 + P3:4 项
+- Files Reviewed:
+  - `src/memory_cluster/store.py`（全文）
+  - `src/memory_cluster/cli.py`（全文）
+  - `src/memory_cluster/time_utils.py`
+  - `src/memory_cluster/preference.py`（wrapper 验证）
+  - `src/memory_cluster/retrieve.py`（import 验证）
+  - `tests/test_store_reliability.py`
+  - `tests/test_time_utils.py`
+  - `docs/review/r008_response_codex.md`
+  - `docs/eval/prune_benchmark_report.md`
+  - `docs/patent_kit/05_具体实施方式.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/patent_kit/08_对比文件与绕开说明.md`
+  - `outputs/prune_benchmark.json`
+- Files Changed:
+  - `.claude.md`（追加 R-009 评审报告）
+  - `WORK_PROGRESS.md`（本条目）
+- Review Checklist:
+  - [x] R-008 P1 全部关闭确认
+  - [x] R-012 store.py 可靠性方案审读
+  - [x] _FileLock 原子性分析
+  - [x] 幂等 (id,version) 去重逻辑验证
+  - [x] prune benchmark 3 场景验证
+  - [x] patent_kit 更新审读
+  - [x] 28/28 测试全绿
+  - [x] 自查 SC-009 完成
+
+## Entry R-013
+- Timestamp: 2026-02-10 11:49:27 +08:00
+- Stage: 第二阶段推进（冲突语义增强 + 大样本消融 + 报告同步）
+- Actions:
+  - `compress.py` 新增否定/条件/反事实语义抽取规则，支持 `cond:` 与 `cf:` 作用域槽位。
+  - 新增 `tests/test_conflict_semantics.py`，覆盖否定值抽取、条件作用域隔离、反事实作用域抽取。
+  - `run_ablation.py` 参数化改造（fragment count / thresholds / dataset label）。
+  - 复跑实验并同步报告：
+    - `docs/eval/ablation_report_cn.md`（9 样本）
+    - `docs/eval/ablation_report_large_cn.md`（100 样本 realistic）
+    - `docs/eval/ablation_report_stress_cn.md`（100 样本 stress）
+    - `docs/eval/prune_benchmark_report.md`（与 JSON 同次运行）
+  - 更新交付与计划文档：`README.md`、`docs/FINAL_REPORT.md`、`docs/design/next_phase_plan.md`。
+- Files Reviewed:
+  - `src/memory_cluster/compress.py`
+  - `scripts/run_ablation.py`
+  - `scripts/run_prune_benchmark.py`
+  - `tests/test_conflict_semantics.py`
+  - `docs/eval/ablation_report_cn.md`
+  - `docs/eval/ablation_report_large_cn.md`
+  - `docs/eval/ablation_report_stress_cn.md`
+  - `docs/eval/prune_benchmark_report.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Files Changed:
+  - `src/memory_cluster/compress.py`
+  - `scripts/run_ablation.py`
+  - `tests/test_conflict_semantics.py`
+  - `docs/eval/ablation_report_cn.md`
+  - `docs/eval/ablation_report_large_cn.md`
+  - `docs/eval/ablation_report_stress_cn.md`
+  - `docs/eval/prune_benchmark_report.md`
+  - `README.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `.claude.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 语义增强规则代码自查完成（无重复函数/无编码损坏）
+  - [x] 新增语义单测通过（31/31）
+  - [x] `python -m compileall src tests scripts` 通过
+  - [x] ablation/prune 报告与对应 JSON 同次重跑
+  - [x] 第二阶段文档与计划已同步
