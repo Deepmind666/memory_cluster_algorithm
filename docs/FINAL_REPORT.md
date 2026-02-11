@@ -1,6 +1,6 @@
 ﻿# FINAL REPORT
 
-最后更新：2026-02-10
+最后更新：2026-02-11
 
 ## 1. 当前完成状态
 - [x] 多 Agent 记忆碎片采集与 JSONL 持久化
@@ -34,6 +34,7 @@ python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --re
 python scripts/run_candidate_filter_benchmark.py --output outputs/candidate_filter_benchmark.json --report docs/eval/candidate_filter_benchmark_report.md
 python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md
 python scripts/run_semantic_regression.py --output outputs/semantic_regression_metrics.json --report docs/eval/semantic_regression_report.md
+python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report docs/patent_kit/10_区别特征_技术效果_实验映射.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
@@ -150,12 +151,24 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 - 结论：ANN 候选在当前实现与参数下未稳定优于 candidate filter，因此保持默认关闭，后续以参数调优和更轻量索引结构继续优化。
 
+### 3.9 专利证据包收口（Patent Evidence Pack）
+来源：`outputs/patent_evidence_pack.json`, `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+
+- 统一映射条目：7 项（DF-01 ~ DF-07）
+- 覆盖权利要求：14~20
+- 每项包含：
+  - 区别特征
+  - 技术问题与技术手段
+  - 可复现实验指标
+  - 证据文件路径
+- 工程决策同步：ANN 标记为 `implemented_measured_not_default`，当前默认推荐 `candidate_filter + prune`
+
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
 - 测试：`tests/`（当前 47 条）
 - 数据：`data/examples/`
-- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`, `scripts/run_ann_hybrid_benchmark.py`, `scripts/run_semantic_regression.py`
-- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`, `docs/eval/ann_hybrid_benchmark_report.md`, `docs/eval/semantic_regression_report.md`
+- 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`, `scripts/run_ann_hybrid_benchmark.py`, `scripts/run_semantic_regression.py`, `scripts/build_patent_evidence_pack.py`
+- 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`, `docs/eval/ann_hybrid_benchmark_report.md`, `docs/eval/semantic_regression_report.md`, `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
 - 规格：`docs/design/algorithm_spec.md`, `docs/design/algorithm_spec_detailed.md`
 - 快申计划：`docs/design/cn_fast_track_patent_plan.md`
 - 专利草案：`docs/patent_kit/`

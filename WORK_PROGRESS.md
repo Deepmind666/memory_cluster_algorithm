@@ -1200,3 +1200,46 @@
   - [x] ANN 三方对照实验可复现并产出报告
   - [x] 质量门槛可审计（cluster/merge/conflict 一致性）
   - [x] 第二阶段结论已落地文档（ANN 默认关闭，candidate+prune 推荐）
+
+## Entry R-018
+- Timestamp: 2026-02-11 09:21:07 +08:00
+- Stage: 专利证据收口（自动化映射 + 文本对齐）
+- Actions:
+  - 新增证据包生成脚本：`scripts/build_patent_evidence_pack.py`。
+  - 自动生成统一证据产物：
+    - `outputs/patent_evidence_pack.json`
+    - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+  - `06_权利要求书_草案.md` 新增权利要求18/19/20（候选筛选、ANN 混合、语义精度回归）。
+  - `05_具体实施方式.md` 新增实施例五/六量化结果。
+  - `08_对比文件与绕开说明.md` 增补 R-017 差异化条目。
+  - `00_技术交底书_总览.md` 增加第10号文档索引。
+  - 同步文档：`README.md`、`docs/FINAL_REPORT.md`、`docs/design/next_phase_plan.md`、`09_授权潜力评估与下一步建议.md`。
+- Files Reviewed:
+  - `docs/patent_kit/05_具体实施方式.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/patent_kit/08_对比文件与绕开说明.md`
+  - `docs/patent_kit/09_授权潜力评估与下一步建议.md`
+  - `outputs/ablation_metrics*.json`
+  - `outputs/prune_benchmark.json`
+  - `outputs/candidate_filter_benchmark.json`
+  - `outputs/ann_hybrid_benchmark.json`
+  - `outputs/semantic_regression_metrics.json`
+- Files Changed:
+  - `scripts/build_patent_evidence_pack.py`
+  - `outputs/patent_evidence_pack.json`
+  - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+  - `docs/patent_kit/00_技术交底书_总览.md`
+  - `docs/patent_kit/05_具体实施方式.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/patent_kit/08_对比文件与绕开说明.md`
+  - `docs/patent_kit/09_授权潜力评估与下一步建议.md`
+  - `README.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] 证据包由脚本自动生成，避免手工抄写
+  - [x] 权利要求与证据条目一一映射（14~20）
+  - [x] 全量测试通过（47/47）
+  - [x] compileall 通过
+  - [x] 证据脚本重跑通过并产出最新文件

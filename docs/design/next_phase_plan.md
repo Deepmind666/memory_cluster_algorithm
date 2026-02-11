@@ -1,87 +1,71 @@
-# Next Phase Plan (R-017)
+# Next Phase Plan (R-018)
 
 最后更新：2026-02-11
 
 ## 1. 当前状态
-- 已完成并验证：CEG / ARB / DMG + Merge Upper-Bound Prune。
-- 已完成并验证：Merge Candidate Filter（候选筛选降耗，默认关闭）。
-- 已完成并验证：语义精度回归（条件边界、否定窗口、跨句指代）。
-- 已完成并验证：ANN Hybrid Candidates（多表近似候选，默认关闭）。
+- 已完成并验证：CEG / ARB / DMG / Prune / Candidate Filter / ANN Hybrid / 语义精度回归。
+- 已完成并验证：专利证据包自动收口（区别特征-技术效果-实验数据统一映射）。
 - 单元测试：47/47 通过。
-- 已形成 7 套可复现实验：
-  - 小样本消融：`outputs/ablation_metrics.json`
-  - 100 样本 realistic 消融：`outputs/ablation_metrics_large.json`
-  - 100 样本 stress 消融：`outputs/ablation_metrics_stress.json`
-  - prune 对照：`outputs/prune_benchmark.json`
-  - candidate filter 对照：`outputs/candidate_filter_benchmark.json`
-  - semantic regression：`outputs/semantic_regression_metrics.json`
-  - ann hybrid 对照：`outputs/ann_hybrid_benchmark.json`
+- 已形成 8 套可复现实验/证据产物：
+  - `outputs/ablation_metrics.json`
+  - `outputs/ablation_metrics_large.json`
+  - `outputs/ablation_metrics_stress.json`
+  - `outputs/prune_benchmark.json`
+  - `outputs/candidate_filter_benchmark.json`
+  - `outputs/ann_hybrid_benchmark.json`
+  - `outputs/semantic_regression_metrics.json`
+  - `outputs/patent_evidence_pack.json`
 
-## 2. 本轮完成项（Phase-5 性能工程第二阶段）
-1. ANN 候选门控实现（`src/memory_cluster/cluster.py`）
-- 新增 ANN 近似候选开关与参数：
-  - `enable_merge_ann_candidates`
-  - `merge_ann_num_tables`
-  - `merge_ann_bits_per_table`
-  - `merge_ann_probe_radius`
-  - `merge_ann_max_neighbors`
-  - `merge_ann_score_dims`
-- 支持三种门控模式：
-  - candidate only
-  - ann only
-  - hybrid（candidate ∪ ann）
-- 新增可审计指标：
-  - `merge_pairs_skipped_by_ann_candidates`
-  - `merge_pairs_skipped_by_hybrid_candidates`
+## 2. 本轮完成项（Phase-6 专利证据收口）
+1. 证据包脚本（`scripts/build_patent_evidence_pack.py`）
+- 自动汇总 ablation/prune/candidate/ann/semantic 输出。
+- 统一生成：
+  - `outputs/patent_evidence_pack.json`
+  - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
 
-2. 工程接入
-- `PreferenceConfig`、`pipeline.py`、`cli.py` 全链路接入 ANN 参数。
-- CLI 新增参数：`--enable-merge-ann-candidates` 与 `--merge-ann-*`。
+2. 权利要求与对比文档对齐
+- `docs/patent_kit/06_权利要求书_草案.md` 新增从属项：
+  - 权利要求18（候选筛选）
+  - 权利要求19（ANN 混合候选）
+  - 权利要求20（冲突语义精度回归）
+- `docs/patent_kit/08_对比文件与绕开说明.md` 增补 R-017 差异化条目。
+- `docs/patent_kit/05_具体实施方式.md` 增补实施例五/六量化结果。
 
-3. 测试与证据
-- 新增测试：`tests/test_merge_ann_candidates.py`（3 条）。
-- 新增 benchmark：`scripts/run_ann_hybrid_benchmark.py`。
-- 新增报告：`docs/eval/ann_hybrid_benchmark_report.md`。
-- 质量门槛（cluster/merge/conflict 一致性）在实验中全部通过。
+3. 交付目录更新
+- `docs/patent_kit/00_技术交底书_总览.md` 增加第 10 号文档索引。
 
-## 3. 第二阶段结论
-1. sparse_no_merge 场景
-- `candidate_prune` 最优：`avg_speedup_ratio=37.8138%`
-- `ann_prune` 有收益：`11.3727%`
-- `hybrid_prune` 有收益：`10.1826%`
+## 3. 当前工程决策
+1. 默认推荐路径
+- `candidate_filter + prune`
 
-2. merge_active 场景
-- `candidate_prune` 最优：`16.0152%`
-- `ann_prune` 与 `hybrid_prune` 均出现负加速（分别 `-16.0874%`、`-17.9044%`）
-
-3. 决策
-- ANN 门控保留为实验特性，默认关闭。
-- 当前生产推荐路径：`candidate_filter + prune`。
+2. ANN 状态
+- `implemented_measured_not_default`
+- 原因：active merge 场景当前仍有负加速，需进一步优化索引与参数。
 
 ## 4. 剩余高优先级工作
-1. 专利证据收口（P1）
-- 目标：形成“区别特征-技术效果-实验数据”统一证据包，支持代理人直接复核。
-- 交付：统一索引表、复现实验命令、图表截图索引、指标对应权利要求映射。
+1. ANN 开销优化（P1）
+- 目标：active 场景转正收益。
+- 交付：轻量索引实现 + 网格参数扫描 + 收益区间图。
 
-2. ANN 降开销优化（P2）
-- 目标：降低 ANN 构建和探针开销，使 active 场景不再负加速。
-- 交付：轻量索引实现、参数网格搜索结果、收益区间图。
+2. 专利文本增强（P1）
+- 目标：将证据包映射到完整独权/从权论证链，降低审查答复成本。
+- 交付：权利要求逐条“问题-手段-效果-证据ID”附录。
 
-3. 语义长句扩展（P2）
-- 目标：覆盖多重嵌套条件与跨句链式指代（>=3 句）。
-- 交付：误报集扩容 + 对抗样例回归脚本。
+3. 长句语义回归扩展（P2）
+- 目标：覆盖多重嵌套条件、链式回指、否定冲突组合。
+- 交付：新增对抗样例集（>=30）与自动回归脚本。
 
 ## 5. 建议节奏
-1. 2026-02-11：证据包索引结构与专利映射模板落地
-2. 2026-02-12：ANN 参数网格与轻量索引试验
-3. 2026-02-13：专利文本对齐与提交前自查
+1. 2026-02-11：ANN 参数网格与轻量索引原型
+2. 2026-02-12：权利要求逐条证据附录
+3. 2026-02-13：提交前总复核（代码+实验+专利文本一致性）
 
 ## 6. 风险与缓解
-- 风险：ANN 在活跃合并场景引入额外开销。
-- 缓解：默认关闭 ANN；启用时必须通过质量门槛并对比 baseline speedup。
+- 风险：性能优化与证据一致性冲突。
+- 缓解：每次优化后强制重跑 benchmark + evidence pack 生成脚本。
 
-- 风险：规则与性能策略增多导致可解释性下降。
-- 缓解：每个开关必须对应指标字段与对照实验报告。
+- 风险：专利文本与实测数据脱节。
+- 缓解：仅允许从 `outputs/patent_evidence_pack.json` 引用指标，不手工抄写。
 
 ## 7. 非法律声明
 本计划用于工程执行，不构成法律意见。正式申请文本需由专利代理人复核。
