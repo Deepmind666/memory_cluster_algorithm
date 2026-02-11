@@ -1,6 +1,6 @@
 # Semantic Precision Regression Report
 
-- generated_at: 2026-02-10T17:01:20.954158+00:00
+- generated_at: 2026-02-11T03:12:37.294422+00:00
 - case_count: 8
 - passed_cases: 8
 - failed_cases: 0

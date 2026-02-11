@@ -255,7 +255,7 @@ def main() -> int:
     parser.add_argument("--warmup-runs", type=int, default=2)
     parser.add_argument("--prune-dims", type=int, default=48)
     parser.add_argument("--bucket-dims", type=int, default=10)
-    parser.add_argument("--candidate-max-neighbors", type=int, default=24)
+    parser.add_argument("--candidate-max-neighbors", type=int, default=48)
     parser.add_argument("--ann-num-tables", type=int, default=6)
     parser.add_argument("--ann-bits-per-table", type=int, default=10)
     parser.add_argument("--ann-probe-radius", type=int, default=1)

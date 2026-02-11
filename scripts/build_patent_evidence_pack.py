@@ -59,6 +59,9 @@ def _build_entries(
 
     candidate_sparse = (candidate_scenarios.get("sparse_no_merge_case") or {}).get("summary") or {}
     candidate_active = (candidate_scenarios.get("merge_active_case") or {}).get("summary") or {}
+    candidate_active_equal = bool(candidate_active.get("cluster_count_equal")) and bool(
+        candidate_active.get("merges_applied_equal")
+    )
 
     ann_sparse = ((ann_scenarios.get("sparse_no_merge_case") or {}).get("comparisons_vs_baseline") or {}).get(
         "ann_prune"
@@ -164,13 +167,18 @@ def _build_entries(
             "claim_refs": ["权利要求18"],
             "technical_problem": "大规模候选对数量过大",
             "technical_mechanism": "按签名桶和邻桶限制候选邻接图",
-            "technical_effect": "明显减少 merge attempts 且保持结果一致",
+            "technical_effect": (
+                "显著减少 merge attempts，并在当前 active 基准保持结果一致"
+                if candidate_active_equal
+                else "显著减少 merge attempts；稀疏场景结果一致，active 场景存在可量化质量漂移"
+            ),
             "key_metrics": {
                 "sparse_attempt_reduction_ratio": candidate_sparse.get("attempt_reduction_ratio"),
                 "sparse_avg_speedup_ratio": candidate_sparse.get("avg_speedup_ratio"),
                 "active_attempt_reduction_ratio": candidate_active.get("attempt_reduction_ratio"),
                 "active_avg_speedup_ratio": candidate_active.get("avg_speedup_ratio"),
                 "active_cluster_count_equal": candidate_active.get("cluster_count_equal"),
+                "active_merges_applied_equal": candidate_active.get("merges_applied_equal"),
             },
             "evidence_files": [
                 "outputs/candidate_filter_benchmark.json",
@@ -296,7 +304,8 @@ def _write_markdown(
             "",
             "## 四、工程决策快照",
             "",
-            "- 当前默认推荐路径: `candidate_filter + prune`。",
+            "- 当前默认推荐路径: `prune_only (exact merge)`。",
+            "- Candidate Filter 状态: `implemented_and_measured`（稀疏场景收益明显，active 场景需按质量门槛调参）。",
             "- ANN 方案状态: `implemented_measured_not_default`（active 场景仍有负加速，后续继续调优）。",
             "- 说明: 本文档为技术证据索引，不构成法律意见。",
             "",

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from src.memory_cluster.models import MemoryFragment, PreferenceConfig
+from src.memory_cluster.cluster import IncrementalClusterer
+from src.memory_cluster.embed import HashEmbeddingProvider
+from src.memory_cluster.models import MemoryCluster, MemoryFragment, PreferenceConfig
 from src.memory_cluster.pipeline import build_cluster_result
 
 
@@ -46,6 +48,39 @@ def _active_fragments(count: int = 96) -> list[MemoryFragment]:
 
 
 class TestMergeAnnCandidates(unittest.TestCase):
+    def test_ann_signature_not_degenerate_on_nonnegative_embeddings(self) -> None:
+        provider = HashEmbeddingProvider(dim=128)
+        clusterer = IncrementalClusterer(
+            enable_merge_ann_candidates=True,
+            merge_ann_num_tables=4,
+            merge_ann_bits_per_table=8,
+            merge_ann_probe_radius=1,
+            merge_ann_max_neighbors=16,
+            merge_ann_score_dims=32,
+        )
+        vectors = [provider.embed(f"ann signature sample {idx} mode {idx % 4}") for idx in range(16)]
+        signatures = {clusterer._ann_signature(vec, 0) for vec in vectors}
+        self.assertGreater(len(signatures), 1)
+
+    def test_ann_neighbor_degree_respects_cap(self) -> None:
+        provider = HashEmbeddingProvider(dim=128)
+        clusterer = IncrementalClusterer(
+            enable_merge_ann_candidates=True,
+            merge_ann_num_tables=4,
+            merge_ann_bits_per_table=8,
+            merge_ann_probe_radius=1,
+            merge_ann_max_neighbors=3,
+            merge_ann_score_dims=32,
+        )
+        clusters = [
+            MemoryCluster(cluster_id=f"a{idx:03d}", centroid=provider.embed(f"ann cluster text {idx} mode fast"))
+            for idx in range(30)
+        ]
+        neighbors = clusterer._build_ann_candidate_neighbors(clusters)
+        self.assertIsNotNone(neighbors)
+        for linked in (neighbors or {}).values():
+            self.assertLessEqual(len(linked), 3)
+
     def test_ann_candidates_reduce_attempts_on_sparse_case(self) -> None:
         fragments = _sparse_fragments(72)
         pref_off = PreferenceConfig.from_dict({"enable_merge_ann_candidates": False})

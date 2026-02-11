@@ -98,6 +98,10 @@ def summarize_pair(baseline: dict[str, Any], optimized: dict[str, Any]) -> dict[
         "attempt_reduction_ratio": round(attempt_reduction, 6),
         "baseline_merge_attempts": base_attempts,
         "optimized_merge_attempts": opt_attempts,
+        "baseline_merges_applied": int(base_metrics.get("merges_applied") or 0),
+        "optimized_merges_applied": int(opt_metrics.get("merges_applied") or 0),
+        "merges_applied_equal": int(base_metrics.get("merges_applied") or 0)
+        == int(opt_metrics.get("merges_applied") or 0),
         "optimized_pairs_skipped_by_candidate_filter": int(
             opt_metrics.get("merge_pairs_skipped_by_candidate_filter") or 0
         ),
@@ -152,7 +156,7 @@ def main() -> int:
     parser.add_argument("--runs", type=int, default=10)
     parser.add_argument("--warmup-runs", type=int, default=2)
     parser.add_argument("--bucket-dims", type=int, default=10)
-    parser.add_argument("--max-neighbors", type=int, default=16)
+    parser.add_argument("--max-neighbors", type=int, default=48)
     parser.add_argument("--sparse-similarity-threshold", type=float, default=2.0)
     parser.add_argument("--sparse-merge-threshold", type=float, default=0.95)
     parser.add_argument("--active-similarity-threshold", type=float, default=0.82)
@@ -243,6 +247,7 @@ def main() -> int:
                     f"- avg_speedup_ratio: {summary.get('avg_speedup_ratio')}",
                     f"- attempt_reduction_ratio: {summary.get('attempt_reduction_ratio')}",
                     f"- cluster_count_equal: {summary.get('cluster_count_equal')}",
+                    f"- merges_applied_equal: {summary.get('merges_applied_equal')}",
                     f"- merge_activity_present: {summary.get('merge_activity_present')}",
                     "",
                 ]

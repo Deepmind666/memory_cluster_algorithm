@@ -152,7 +152,7 @@ class PreferenceConfig:
     merge_prune_dims: int = 48
     enable_merge_candidate_filter: bool = False
     merge_candidate_bucket_dims: int = 10
-    merge_candidate_max_neighbors: int = 16
+    merge_candidate_max_neighbors: int = 48
     enable_merge_ann_candidates: bool = False
     merge_ann_num_tables: int = 4
     merge_ann_bits_per_table: int = 8
@@ -190,7 +190,7 @@ class PreferenceConfig:
             merge_prune_dims=max(0, int(data.get("merge_prune_dims", 48))),
             enable_merge_candidate_filter=bool(data.get("enable_merge_candidate_filter", False)),
             merge_candidate_bucket_dims=max(1, int(data.get("merge_candidate_bucket_dims", 10))),
-            merge_candidate_max_neighbors=max(1, int(data.get("merge_candidate_max_neighbors", 16))),
+            merge_candidate_max_neighbors=max(1, int(data.get("merge_candidate_max_neighbors", 48))),
             enable_merge_ann_candidates=bool(data.get("enable_merge_ann_candidates", False)),
             merge_ann_num_tables=max(1, int(data.get("merge_ann_num_tables", 4))),
             merge_ann_bits_per_table=max(1, int(data.get("merge_ann_bits_per_table", 8))),

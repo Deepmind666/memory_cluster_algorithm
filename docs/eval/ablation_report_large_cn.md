@@ -1,6 +1,6 @@
 # Ablation Report (CN Fast-Track)
 
-- generated_at: 2026-02-10T05:04:17.830127+00:00
+- generated_at: 2026-02-11T03:12:54.721921+00:00
 - dataset: synthetic_conflict_memory_case_large
 - fragment_count: 100
 - similarity_threshold: 0.68

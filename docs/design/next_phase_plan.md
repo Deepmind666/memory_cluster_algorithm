@@ -1,11 +1,11 @@
-# Next Phase Plan (R-018)
+# Next Phase Plan (R-020)
 
 最后更新：2026-02-11
 
 ## 1. 当前状态
 - 已完成并验证：CEG / ARB / DMG / Prune / Candidate Filter / ANN Hybrid / 语义精度回归。
 - 已完成并验证：专利证据包自动收口（区别特征-技术效果-实验数据统一映射）。
-- 单元测试：47/47 通过。
+- 单元测试：51/51 通过。
 - 已形成 8 套可复现实验/证据产物：
   - `outputs/ablation_metrics.json`
   - `outputs/ablation_metrics_large.json`
@@ -36,29 +36,37 @@
 
 ## 3. 当前工程决策
 1. 默认推荐路径
-- `candidate_filter + prune`
+- `prune_only (exact merge)`
 
-2. ANN 状态
+2. Candidate Filter 状态
+- `implemented_and_measured`
+- 结论：`max_neighbors=48` 已恢复 active 场景质量等效（cluster/merge 一致），但当前 120-fragment 基准存在负加速，暂不作为默认性能路径。
+
+3. ANN 状态
 - `implemented_measured_not_default`
 - 原因：active merge 场景当前仍有负加速，需进一步优化索引与参数。
 
 ## 4. 剩余高优先级工作
-1. ANN 开销优化（P1）
-- 目标：active 场景转正收益。
+1. Candidate Filter 质量-性能调参（P1）
+- 目标：在保持 active 等效性的前提下恢复正收益（降低候选构图开销）。
+- 交付：`max_neighbors`/`bucket_dims` 网格扫描报告 + 构图优化方案（减少全局排序成本）+ 参数分层（高精度/均衡/高性能）。
+
+2. ANN 开销优化（P1）
+- 目标：active 场景转正收益并恢复质量门槛。
 - 交付：轻量索引实现 + 网格参数扫描 + 收益区间图。
 
-2. 专利文本增强（P1）
+3. 专利文本增强（P1）
 - 目标：将证据包映射到完整独权/从权论证链，降低审查答复成本。
 - 交付：权利要求逐条“问题-手段-效果-证据ID”附录。
 
-3. 长句语义回归扩展（P2）
+4. 长句语义回归扩展（P2）
 - 目标：覆盖多重嵌套条件、链式回指、否定冲突组合。
 - 交付：新增对抗样例集（>=30）与自动回归脚本。
 
 ## 5. 建议节奏
-1. 2026-02-11：ANN 参数网格与轻量索引原型
-2. 2026-02-12：权利要求逐条证据附录
-3. 2026-02-13：提交前总复核（代码+实验+专利文本一致性）
+1. 2026-02-11：Candidate Filter 参数网格 + active 场景质量门槛回归
+2. 2026-02-12：ANN 参数网格与轻量索引原型
+3. 2026-02-13：权利要求逐条证据附录 + 提交前总复核（代码+实验+专利文本一致性）
 
 ## 6. 风险与缓解
 - 风险：性能优化与证据一致性冲突。

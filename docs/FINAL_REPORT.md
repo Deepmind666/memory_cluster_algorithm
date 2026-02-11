@@ -24,7 +24,7 @@
 ## 2. 核心命令
 ```powershell
 python -m src.memory_cluster.cli ingest --input data/examples/multi_agent_memory_fragments.jsonl --store outputs/memory_store.jsonl
-python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-merge-upper-bound-prune --merge-prune-dims 48 --enable-merge-candidate-filter --merge-candidate-bucket-dims 10 --merge-candidate-max-neighbors 16 --enable-l2-clusters --l2-min-children 2
+python -m src.memory_cluster.cli build --store outputs/memory_store.jsonl --output outputs/cluster_state_full.json --preferences data/examples/preference_profile.json --similarity-threshold 0.4 --merge-threshold 0.85 --strict-conflict-split --enable-conflict-graph --enable-adaptive-budget --enable-dual-merge-guard --enable-merge-upper-bound-prune --merge-prune-dims 48 --enable-merge-candidate-filter --merge-candidate-bucket-dims 10 --merge-candidate-max-neighbors 48 --enable-l2-clusters --l2-min-children 2
 python -m src.memory_cluster.cli query --state outputs/cluster_state_full.json --query "冲突 alpha" --top-k 3 --cluster-level all --expand
 python scripts/run_benchmark.py --input data/examples/multi_agent_memory_fragments.jsonl --preferences data/examples/preference_profile.json --output outputs/benchmark_latest.json --runs 5
 python scripts/run_ablation.py --output outputs/ablation_metrics.json --report docs/eval/ablation_report_cn.md
@@ -41,11 +41,11 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ## 3. 最新实测结果
 ### 3.1 单元测试
 - 命令：`python -m unittest discover -s tests -p "test_*.py" -v`
-- 结果：47/47 通过
+- 结果：51/51 通过
 
 ### 3.2 Benchmark（默认偏好配置，runs=5）
-- `avg_ms`: 2.503
-- `p95_ms`: 2.719
+- `avg_ms`: 2.855
+- `p95_ms`: 3.751
 - `fragment_count`: 12
 - `cluster_count`: 10
 - `compression_ratio`: 1.299694
@@ -78,18 +78,18 @@ python -m unittest discover -s tests -p "test_*.py" -v
 
 - Primary（merge_active_case）设定：`fragment_count=100`, `similarity_threshold=0.82`, `merge_threshold=0.85`
 - Primary 结果：
-  - baseline（prune off）`avg_ms=19.84`
-  - optimized（prune on）`avg_ms=22.565`
-  - `avg_speedup_ratio=-13.7349%`（该场景 `merge_pairs_pruned_by_bound=0`，存在剪枝开销）
+  - baseline（prune off）`avg_ms=15.632`
+  - optimized（prune on）`avg_ms=15.629`
+  - `avg_speedup_ratio=0.0192%`（该场景 `merge_pairs_pruned_by_bound=0`，收益接近持平）
   - `cluster_count_equal=true`
   - `merge_activity_present=true`（非空洞对比）
 
 - Secondary（realistic_068_082_case）设定：`similarity_threshold=0.68`, `merge_threshold=0.82`
-  - `avg_speedup_ratio=7.3310%`
+  - `avg_speedup_ratio=-0.9119%`
   - `merge_activity_present=false`（该场景不进入 merge 阶段）
 
 - Secondary（sparse_no_merge_case）设定：`similarity_threshold=2.0`, `merge_threshold=0.95`
-  - `avg_speedup_ratio=13.7943%`
+  - `avg_speedup_ratio=17.1783%`
   - `merge_pairs_pruned_by_bound=2519`
   - `cluster_count_equal=true`
 
@@ -110,18 +110,20 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ### 3.6 Merge Candidate Filter 对照实验（synthetic_candidate_filter_case）
 来源：`outputs/candidate_filter_benchmark.json`
 
-- 参数：`bucket_dims=10`, `max_neighbors=16`（可开关，默认关闭）
+- 参数：`bucket_dims=10`, `max_neighbors=48`（高召回默认）
 
 - sparse_no_merge_case（`2.0/0.95`）：
-  - `avg_speedup_ratio=42.6363%`
-  - `attempt_reduction_ratio=75.0140%`
+  - `avg_speedup_ratio=-5.7202%`
+  - `attempt_reduction_ratio=44.2717%`
   - `cluster_count_equal=true`
+  - `merges_applied_equal=true`
 
 - merge_active_case（`0.82/0.85`）：
-  - `avg_speedup_ratio=19.8265%`
-  - `attempt_reduction_ratio=44.4496%`
+  - `avg_speedup_ratio=-10.1915%`
+  - `attempt_reduction_ratio=28.1385%`
   - `cluster_count_equal=true`
-  - `merges_applied` 与 baseline 一致（21）
+  - `merges_applied_equal=true`（`baseline=21`, `optimized=21`）
+  - 说明：`max_neighbors=48` 可恢复 active 场景等效性，但当前实现存在负加速，后续需做性能优化
 
 ### 3.7 语义精度回归（semantic_precision_regression_v1）
 来源：`outputs/semantic_regression_metrics.json`
@@ -134,22 +136,22 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ### 3.8 ANN Hybrid 对照实验（synthetic_ann_hybrid_case）
 来源：`outputs/ann_hybrid_benchmark.json`
 
-- 参数：`prune_dims=48`, `bucket_dims=10`, `candidate_max_neighbors=24`, `ann_num_tables=6`, `ann_bits_per_table=10`, `ann_probe_radius=1`, `ann_max_neighbors=48`
-- 质量门槛：所有变体均满足 `cluster_count_equal=true`、`merges_applied_equal=true`、`conflict_count_equal=true`
+- 参数：`prune_dims=48`, `bucket_dims=10`, `candidate_max_neighbors=48`, `ann_num_tables=6`, `ann_bits_per_table=10`, `ann_probe_radius=1`, `ann_max_neighbors=48`
+- 质量门槛：`ann_prune` 在 active 场景 `quality_gate_pass=false`，其余变体通过
 
 - sparse_no_merge_case（`2.0/0.95`）：
-  - `prune_only`: `avg_speedup_ratio=19.7754%`
-  - `candidate_prune`: `avg_speedup_ratio=37.8138%`（本场景最佳）
-  - `ann_prune`: `avg_speedup_ratio=11.3727%`
-  - `hybrid_prune`: `avg_speedup_ratio=10.1826%`
+  - `prune_only`: `avg_speedup_ratio=19.7253%`（本场景最佳）
+  - `candidate_prune`: `avg_speedup_ratio=-6.4166%`
+  - `ann_prune`: `avg_speedup_ratio=9.7216%`
+  - `hybrid_prune`: `avg_speedup_ratio=-28.1711%`
 
 - merge_active_case（`0.82/0.85`）：
-  - `candidate_prune`: `avg_speedup_ratio=16.0152%`（本场景最佳）
-  - `prune_only`: `avg_speedup_ratio=-2.3038%`
-  - `ann_prune`: `avg_speedup_ratio=-16.0874%`
-  - `hybrid_prune`: `avg_speedup_ratio=-17.9044%`
+  - `prune_only`: `avg_speedup_ratio=0.5175%`（本场景最佳）
+  - `candidate_prune`: `avg_speedup_ratio=-12.2052%`（质量门槛通过）
+  - `ann_prune`: `avg_speedup_ratio=-9.6991%`（质量门槛失败）
+  - `hybrid_prune`: `avg_speedup_ratio=-52.8390%`
 
-- 结论：ANN 候选在当前实现与参数下未稳定优于 candidate filter，因此保持默认关闭，后续以参数调优和更轻量索引结构继续优化。
+- 结论：ANN 候选在当前实现与参数下未稳定优于 prune-only，且 active 场景存在负加速（ann 还有质量门槛失败），因此保持默认关闭。
 
 ### 3.9 专利证据包收口（Patent Evidence Pack）
 来源：`outputs/patent_evidence_pack.json`, `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
@@ -161,11 +163,11 @@ python -m unittest discover -s tests -p "test_*.py" -v
   - 技术问题与技术手段
   - 可复现实验指标
   - 证据文件路径
-- 工程决策同步：ANN 标记为 `implemented_measured_not_default`，当前默认推荐 `candidate_filter + prune`
+- 工程决策同步：ANN 标记为 `implemented_measured_not_default`；默认发布路径为 `prune_only (exact merge)`，Candidate Filter 采用高召回参数（48）但暂不作为默认性能路径
 
 ## 4. 交付资产
 - 代码：`src/memory_cluster/`
-- 测试：`tests/`（当前 47 条）
+- 测试：`tests/`（当前 51 条）
 - 数据：`data/examples/`
 - 实验脚本：`scripts/run_benchmark.py`, `scripts/run_ablation.py`, `scripts/run_prune_benchmark.py`, `scripts/run_candidate_filter_benchmark.py`, `scripts/run_ann_hybrid_benchmark.py`, `scripts/run_semantic_regression.py`, `scripts/build_patent_evidence_pack.py`
 - 实验报告：`docs/eval/ablation_report_cn.md`, `docs/eval/ablation_report_large_cn.md`, `docs/eval/ablation_report_stress_cn.md`, `docs/eval/prune_benchmark_report.md`, `docs/eval/candidate_filter_benchmark_report.md`, `docs/eval/ann_hybrid_benchmark_report.md`, `docs/eval/semantic_regression_report.md`, `docs/patent_kit/10_区别特征_技术效果_实验映射.md`

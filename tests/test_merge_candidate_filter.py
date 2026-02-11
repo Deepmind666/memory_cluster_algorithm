@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from src.memory_cluster.models import MemoryFragment, PreferenceConfig
+from src.memory_cluster.cluster import IncrementalClusterer
+from src.memory_cluster.embed import HashEmbeddingProvider
+from src.memory_cluster.models import MemoryCluster, MemoryFragment, PreferenceConfig
 from src.memory_cluster.pipeline import build_cluster_result
 
 
@@ -46,6 +48,40 @@ def _active_fragments(count: int = 80) -> list[MemoryFragment]:
 
 
 class TestMergeCandidateFilter(unittest.TestCase):
+    def test_candidate_signature_not_degenerate_on_nonnegative_embeddings(self) -> None:
+        provider = HashEmbeddingProvider(dim=128)
+        clusterer = IncrementalClusterer(
+            enable_merge_candidate_filter=True,
+            merge_candidate_bucket_dims=10,
+            merge_candidate_max_neighbors=8,
+        )
+        texts = [
+            "alpha mode fast policy",
+            "beta mode safe policy",
+            "gamma mode balanced policy",
+            "delta mode strict policy",
+            "epsilon mode fast replay",
+            "zeta mode safe replay",
+        ]
+        signatures = {clusterer._candidate_signature(provider.embed(text)) for text in texts}
+        self.assertGreater(len(signatures), 1)
+
+    def test_candidate_neighbor_degree_respects_cap(self) -> None:
+        provider = HashEmbeddingProvider(dim=128)
+        clusterer = IncrementalClusterer(
+            enable_merge_candidate_filter=True,
+            merge_candidate_bucket_dims=10,
+            merge_candidate_max_neighbors=2,
+        )
+        clusters = [
+            MemoryCluster(cluster_id=f"c{idx:03d}", centroid=provider.embed(f"candidate cluster text {idx} mode fast"))
+            for idx in range(24)
+        ]
+        neighbors = clusterer._build_candidate_neighbors(clusters)
+        self.assertIsNotNone(neighbors)
+        for linked in (neighbors or {}).values():
+            self.assertLessEqual(len(linked), 2)
+
     def test_candidate_filter_reduces_attempts_on_sparse_case(self) -> None:
         fragments = _sparse_fragments(64)
 
@@ -100,7 +136,7 @@ class TestMergeCandidateFilter(unittest.TestCase):
             {
                 "enable_merge_candidate_filter": True,
                 "merge_candidate_bucket_dims": 10,
-                "merge_candidate_max_neighbors": 16,
+                "merge_candidate_max_neighbors": 48,
             }
         )
         baseline = build_cluster_result(
