@@ -179,3 +179,23 @@
 - Process hardening:
   - `docs/REVIEW_CHECKLIST.md` upgraded to `v2.2` and now requires `docs/review/review_closure_matrix.md` as a mandatory review attachment.
   - `docs/review/review_closure_matrix.md` upgraded to `v1.2`, added `closed_by_reviewer` lifecycle status.
+
+## R-040 Delta (2026-02-13)
+- Upgraded core stability script:
+  - `scripts/run_core_claim_stability.py` now supports batched/resumable runs via `--checkpoint` + `--resume` + `--max-new-runs`.
+  - Added DMG profile activation metrics:
+    - `dmg_guard_activation_rate`
+    - `dmg_mixed_mode_reduction_rate`
+    - `baseline_mixed_mode_presence_rate`
+    - `dmg_effective_profile`
+- Large-scale reproducible stability runs completed:
+  - `outputs/core_claim_stability_semi_real_5000_realistic.json` (`runs=6`, complete)
+  - `outputs/core_claim_stability_semi_real_5000_stress.json` (`runs=3`, completed by checkpoint resume)
+  - reports:
+    - `docs/eval/core_claim_stability_semi_real_5000_realistic_report.md`
+    - `docs/eval/core_claim_stability_semi_real_5000_stress_report.md`
+- Key observations:
+  - realistic-5000: CEG/ARB positive and stable; DMG activation rate `0.0` (profile not activated, now explicitly reported instead of being ambiguous).
+  - stress-5000: DMG activation rate `1.0`; CEG/ARB/DMG gains all positive; full runtime CI upper bound remains non-stable (`full_runtime_ci95_upper_lt_0=false`).
+- Evidence pipeline sync:
+  - `scripts/build_patent_evidence_pack.py` command catalog now includes 5000-scale stability commands (realistic + stress batched resume chain).

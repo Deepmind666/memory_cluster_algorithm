@@ -2393,3 +2393,36 @@
   - [x] 半真实 realistic/stress 双场景已产出报告
   - [x] 评审矩阵强制附件规则已入清单
   - [x] 全量自查通过
+
+## Entry R-040-Core-Stability-5000-Batched
+- Timestamp: 2026-02-13 21:45:17 +08:00
+- Stage: 下一轮推进（5000 规模稳定性证据 + 分批续跑工程化）
+- Actions:
+  - 升级 `scripts/run_core_claim_stability.py`：
+    - 增加分批续跑参数 `--checkpoint` / `--resume` / `--max-new-runs`；
+    - 增加 DMG 激活指标：`dmg_guard_activation_rate`、`dmg_mixed_mode_reduction_rate`、`baseline_mixed_mode_presence_rate`、`dmg_effective_profile`；
+    - 报告新增执行状态字段：`runs_completed`、`is_complete`。
+  - 执行 5000 规模实验：
+    - realistic: `runs=6` 一次性完成；
+    - stress: `runs=3` 通过 batch1 + resume 两步完成（长耗时场景可复现）。
+  - 升级证据链：
+    - `scripts/build_patent_evidence_pack.py` command catalog 新增 5000 规模 stability 命令。
+  - 评审闭环矩阵更新：
+    - `docs/review/review_closure_matrix.md` 升级至 `v1.3`；
+    - R-028 `P3-NEW-2`（reviewer-direct-fix 追踪建议）标记为闭环完成。
+- Verification:
+  - `python -m unittest tests.test_core_claim_stability_unit -v` PASS (`6/6`)
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`95/95`)
+  - `python -m compileall -q src scripts tests` PASS
+  - `python scripts/run_core_claim_stability.py --input data/examples/semi_real_memory_fragments_5000_realistic.jsonl --dataset-label semi_real_5000_realistic --output outputs/core_claim_stability_semi_real_5000_realistic.json --report docs/eval/core_claim_stability_semi_real_5000_realistic_report.md --runs 6 --warmup-runs 1 --similarity-threshold 0.68 --merge-threshold 0.82 --checkpoint outputs/core_claim_stability_semi_real_5000_realistic_checkpoint.json` PASS (`runs_completed=6`, `is_complete=true`)
+  - `python scripts/run_core_claim_stability.py --input data/examples/semi_real_memory_fragments_5000_stress.jsonl --dataset-label semi_real_5000_stress --output outputs/core_claim_stability_semi_real_5000_stress.json --report docs/eval/core_claim_stability_semi_real_5000_stress_report.md --runs 3 --max-new-runs 1 --warmup-runs 0 --similarity-threshold 1.1 --merge-threshold 0.05 --checkpoint outputs/core_claim_stability_semi_real_5000_stress_checkpoint.json` PASS (batch1)
+  - `python scripts/run_core_claim_stability.py --input data/examples/semi_real_memory_fragments_5000_stress.jsonl --dataset-label semi_real_5000_stress --output outputs/core_claim_stability_semi_real_5000_stress.json --report docs/eval/core_claim_stability_semi_real_5000_stress_report.md --runs 3 --max-new-runs 2 --warmup-runs 0 --similarity-threshold 1.1 --merge-threshold 0.05 --checkpoint outputs/core_claim_stability_semi_real_5000_stress_checkpoint.json --resume` PASS (`runs_completed=3`, `is_complete=true`)
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS (`passed=true`, `violation_count=0`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] 5000 realistic/stress 稳定性实验可复现
+  - [x] stress 长耗时场景支持 checkpoint 续跑
+  - [x] DMG 激活度指标加入统计与报告
+  - [x] 证据命令目录同步新增 5000 稳定性命令
+  - [x] 全量自查通过

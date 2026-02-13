@@ -238,3 +238,22 @@ Next:
 1. Run stability benchmark at 5000-scale with batched execution (`runs>=3`) for stress profile to reduce runtime timeout risk.
 2. Add profile-activation coverage metric (DMG activation ratio) to avoid misreading "DMG=0" as regression under realistic profile.
 3. Integrate stability outputs into evidence-pack command catalog after one more reproducible run.
+
+## R-040 Plan Update (2026-02-13)
+Completed:
+- Added batched/resumable execution to `run_core_claim_stability.py`:
+  - checkpoint chain: `--checkpoint`, `--resume`, `--max-new-runs`.
+- Added DMG activation diagnostics:
+  - `dmg_guard_activation_rate`,
+  - `dmg_mixed_mode_reduction_rate`,
+  - `baseline_mixed_mode_presence_rate`,
+  - `dmg_effective_profile`.
+- Completed 5000-scale stability runs:
+  - realistic-5000 (`runs=6`, complete),
+  - stress-5000 (`runs=3`, completed by two-step checkpoint resume).
+- Integrated new reproducibility commands into `build_patent_evidence_pack.py` command catalog.
+
+Next:
+1. Add stage2 guardrail optional checker for core stability completeness (`is_complete=true` on selected benchmark profiles).
+2. Add CI-friendly smoke test for checkpoint signature mismatch path (`--resume` with wrong dataset/thresholds should fail).
+3. Prepare R-040 evidence summary for external review package (include 5000-stress runtime cost and batching rationale).

@@ -1,6 +1,6 @@
 # Review Closure Matrix
 
-Version: v1.2  
+Version: v1.3
 Last Updated: 2026-02-13  
 Owner: Codex (implementation), Claude Opus (review)
 
@@ -31,6 +31,7 @@ This matrix is the fast-check handoff artifact for each review cycle.
 | Source Review | Finding ID | Severity | Finding Summary | Status | Resolved In | Evidence |
 |---|---|---|---|---|---|---|
 | R-028 | P3-NEW-1 | P3 | `.claude.md` Cross-Reference retained `v2.0` label | `closed_by_reviewer` | R-028 | `.claude.md` + `docs/review/r028_r036_r037_closure_matrix_review.md` |
+| R-028 | P3-NEW-2 | P3 | closure matrix should track reviewer-direct-fix items | `closed` | R-039 + R-040 | `docs/review/review_closure_matrix.md` (`closed_by_reviewer` status + R-028 mapping) |
 
 ## Accepted Limitations (Non-blocking)
 | Item | Severity | Status | Evidence |
