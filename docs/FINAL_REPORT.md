@@ -1,10 +1,10 @@
 ﻿# FINAL REPORT
 
-鏈€鍚庢洿鏂帮細2026-02-12
+鏈€鍚庢洿鏂帮細2026-02-14
 
 ## 1. 褰撳墠鐘舵€?- 鏍稿績绠楁硶涓荤嚎绋冲畾锛歚CEG + ARB + DMG + 鍐茬獊璇箟绮惧害`銆?- Candidate 宸插畬鎴愨€滈粯璁ら浂鎹熷け妗ｂ€濅笌鈥滈珮鎬ц兘瀹為獙妗ｂ€濆垎灞傜鐞嗐€?- ANN 宸插畬鎴愯瘖鏂彛寰勫榻愶細鎶ュ憡鍚屾椂缁欏嚭 `fragment-level` 涓?`cluster-entry-level`锛屼笉鍐嶆贩娣嗏€滄姤鍛婂け璐ヤ絾杩愯姝ｅ父鈥濄€?- 涓撳埄璇佹嵁鍖呭彲鑷姩閲嶅缓骞舵牎楠岋細`outputs/patent_evidence_pack.json`銆?
 ## 2. 鑷煡缁撴灉
-1. `python -m unittest discover -s tests -p "test_*.py"`锛歚84/84` 閫氳繃  
+1. `python -m unittest discover -s tests -p "test_*.py"`锛歚98/98` 閫氳繃
 2. `python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md --fragment-count 240 --runs 10 --warmup-runs 2`锛氶€氳繃  
 3. 鍏抽敭杈撳嚭宸叉洿鏂帮細`outputs/ann_hybrid_benchmark.json`銆乣docs/eval/ann_hybrid_benchmark_report.md`
 
@@ -199,3 +199,22 @@
   - stress-5000: DMG activation rate `1.0`; CEG/ARB/DMG gains all positive; full runtime CI upper bound remains non-stable (`full_runtime_ci95_upper_lt_0=false`).
 - Evidence pipeline sync:
   - `scripts/build_patent_evidence_pack.py` command catalog now includes 5000-scale stability commands (realistic + stress batched resume chain).
+
+## R-041 Delta (2026-02-14)
+- Stage-2 guardrail enhanced with optional core-stability completeness gate:
+  - `scripts/run_stage2_guardrail.py` adds repeatable `--core-stability <path>` input.
+  - New blocker checks:
+    - `core_stability_complete_semi_real_5000_realistic`
+    - `core_stability_complete_semi_real_5000_stress`
+  - Current guarded run result:
+    - `check_count=14`
+    - `blocker_failures=0`
+    - `warning_failures=1` (known ANN active positive-speed target warning)
+    - `core_stability.profile_count=2`, `core_stability.incomplete_count=0`
+- Added CI-friendly resume mismatch smoke test:
+  - `tests/test_core_claim_stability_resume_smoke.py`
+  - Verifies `run_core_claim_stability.py --resume` fails when checkpoint signature mismatches current thresholds.
+- Test baseline update:
+  - full suite `93/93 -> 98/98`.
+- Evidence command sync:
+  - `CMD_STAGE2_GUARDRAIL` now includes two core-stability inputs for reproducible completeness checks in evidence rebuild.

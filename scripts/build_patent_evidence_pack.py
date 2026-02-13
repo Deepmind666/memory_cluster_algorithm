@@ -28,7 +28,7 @@ COMMAND_CATALOG: dict[str, str] = {
     "CMD_CANDIDATE_PROFILE_SYNTH": "python scripts/run_candidate_profile_validation.py --dataset-label synthetic_active --output outputs/candidate_profile_validation_synthetic_active.json --report docs/eval/candidate_profile_validation_synthetic_active_report.md --sizes 240,1000,5000 --runs 2 --warmup-runs 1 --similarity-threshold 0.82 --merge-threshold 0.85",
     "CMD_CANDIDATE_PROFILE_REALISTIC": "python scripts/run_candidate_profile_validation.py --dataset-input data/examples/semi_real_memory_fragments_5000_realistic.jsonl --dataset-label semi_real_realistic --output outputs/candidate_profile_validation_realistic.json --report docs/eval/candidate_profile_validation_realistic_report.md --sizes 240,1000,5000 --runs 2 --warmup-runs 1 --similarity-threshold 0.68 --merge-threshold 0.82",
     "CMD_CANDIDATE_PROFILE_STRESS": "python scripts/run_candidate_profile_validation.py --dataset-input data/examples/semi_real_memory_fragments_5000_stress.jsonl --dataset-label semi_real_stress --output outputs/candidate_profile_validation_stress.json --report docs/eval/candidate_profile_validation_stress_report.md --sizes 240,1000,5000 --runs 1 --warmup-runs 0 --similarity-threshold 1.1 --merge-threshold 0.05",
-    "CMD_STAGE2_GUARDRAIL": "python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md",
+    "CMD_STAGE2_GUARDRAIL": "python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md --core-stability outputs/core_claim_stability_semi_real_5000_realistic.json --core-stability outputs/core_claim_stability_semi_real_5000_stress.json",
     "CMD_ANN_HYBRID": "python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md --fragment-count 240 --runs 10 --warmup-runs 2",
     "CMD_SEMANTIC": "python scripts/run_semantic_regression.py --output outputs/semantic_regression_metrics.json --report docs/eval/semantic_regression_report.md",
     "CMD_STAGE3_SWEEP": "python scripts/run_stage3_param_sweep.py --output outputs/stage3_param_sweep.json --report docs/eval/stage3_param_sweep_report.md --fragment-count 120 --runs 3 --warmup-runs 1",
@@ -128,6 +128,7 @@ def _build_entries(
     candidate_profile_stress_summary = dict(candidate_profile_stress.get("summary") or {})
     stage2_guardrail_summary = dict(stage2_guardrail.get("summary") or {})
     stage2_guardrail_known = dict(stage2_guardrail.get("known_limitations") or {})
+    stage2_guardrail_core = dict(stage2_guardrail.get("core_stability") or {})
 
     ann_rows = _scenario_by_name(list(ann_hybrid.get("scenarios") or []))
     ann_sparse_comp = dict((ann_rows.get("sparse_no_merge_case") or {}).get("comparisons_vs_baseline") or {})
@@ -345,6 +346,8 @@ def _build_entries(
                 ),
                 "stage2_guardrail_candidate_active_speed": _pick(stage2_guardrail_known, "candidate_active_speed"),
                 "stage2_guardrail_ann_active_speed": _pick(stage2_guardrail_known, "ann_active_speed"),
+                "stage2_guardrail_core_stability_profile_count": _pick(stage2_guardrail_core, "profile_count"),
+                "stage2_guardrail_core_stability_incomplete_count": _pick(stage2_guardrail_core, "incomplete_count"),
             },
             "evidence_files": [
                 "outputs/candidate_filter_benchmark.json",

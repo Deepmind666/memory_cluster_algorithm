@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 
@@ -29,6 +30,10 @@ def _check(*, name: str, passed: bool, severity: str, detail: str) -> dict[str, 
     }
 
 
+def _slug(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(value).lower()).strip("_") or "profile"
+
+
 def _active_ann_comparison(payload: dict[str, Any], variant: str) -> dict[str, Any]:
     for scenario in payload.get("scenarios") or []:
         if str(scenario.get("name")) != "merge_active_case":
@@ -52,6 +57,7 @@ def evaluate_guardrails(
     candidate_stress: dict[str, Any],
     ann_hybrid: dict[str, Any],
     candidate_benchmark: dict[str, Any] | None = None,
+    core_stability_profiles: list[dict[str, Any]] | None = None,
     allow_known_fast_loss: bool = True,
     candidate_active_speed_warn_floor: float = -0.20,
     ann_active_speed_warn_floor: float = -0.20,
@@ -188,6 +194,39 @@ def evaluate_guardrails(
     else:
         candidate_active_speed = None
 
+    core_profiles = list(core_stability_profiles or [])
+    core_stability_rows: list[dict[str, Any]] = []
+    core_incomplete_count = 0
+    for row in core_profiles:
+        profile_name = str(row.get("name") or "core_stability")
+        profile_payload = dict(row.get("payload") or {})
+        runs_completed = int(profile_payload.get("runs_completed") or 0)
+        runs_target = int(profile_payload.get("runs") or 0)
+        is_complete = bool(profile_payload.get("is_complete"))
+        if not is_complete:
+            core_incomplete_count += 1
+        core_stability_rows.append(
+            {
+                "name": profile_name,
+                "path": str(row.get("path") or ""),
+                "is_complete": is_complete,
+                "runs_completed": runs_completed,
+                "runs_target": runs_target,
+            }
+        )
+        checks.append(
+            _check(
+                name=f"core_stability_complete_{_slug(profile_name)}",
+                passed=is_complete,
+                severity="blocker",
+                detail=(
+                    f"Core stability profile '{profile_name}' must be complete "
+                    f"(is_complete=true, runs_completed>=runs); current "
+                    f"is_complete={is_complete}, runs_completed={runs_completed}, runs={runs_target}."
+                ),
+            )
+        )
+
     blocker_failures = [item for item in checks if item.get("severity") == "blocker" and not item.get("passed")]
     warning_failures = [item for item in checks if item.get("severity") == "warning" and not item.get("passed")]
 
@@ -205,6 +244,11 @@ def evaluate_guardrails(
             "candidate_active_speed": candidate_active_speed,
             "ann_active_speed": ann_active_speed,
         },
+        "core_stability": {
+            "profile_count": len(core_stability_rows),
+            "incomplete_count": int(core_incomplete_count),
+            "profiles": core_stability_rows,
+        },
         "checks": checks,
     }
 
@@ -221,8 +265,21 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
         f"- warning_failures: {summary.get('warning_failures')}",
         f"- fast_profile_loss_at_synthetic_n240: {known.get('fast_profile_loss_at_synthetic_n240')}",
         "",
-        "## Checks",
+        "## Core Stability Completeness",
+        f"- profile_count: {(payload.get('core_stability') or {}).get('profile_count')}",
+        f"- incomplete_count: {(payload.get('core_stability') or {}).get('incomplete_count')}",
     ]
+    for row in (payload.get("core_stability") or {}).get("profiles") or []:
+        lines.append(
+            f"- {row.get('name')}: is_complete={row.get('is_complete')}, "
+            f"runs_completed={row.get('runs_completed')}, runs_target={row.get('runs_target')}"
+        )
+    lines.extend(
+        [
+            "",
+        "## Checks",
+        ]
+    )
     for item in payload.get("checks") or []:
         lines.append(
             f"- [{('x' if item.get('passed') else ' ')}] {item.get('name')} "
@@ -249,6 +306,12 @@ def main() -> int:
     )
     parser.add_argument("--ann-hybrid", default="outputs/ann_hybrid_benchmark.json")
     parser.add_argument("--candidate-benchmark", default="outputs/candidate_filter_benchmark.json")
+    parser.add_argument(
+        "--core-stability",
+        action="append",
+        default=[],
+        help="Optional repeated input: path to core stability output JSON that must be complete.",
+    )
     parser.add_argument("--output", required=True)
     parser.add_argument("--report")
     parser.add_argument(
@@ -289,12 +352,26 @@ def main() -> int:
     else:
         raise FileNotFoundError(f"missing input file: {candidate_benchmark_path.as_posix()}")
 
+    core_stability_profiles: list[dict[str, Any]] = []
+    for item in args.core_stability:
+        path = Path(str(item))
+        profile_payload = _load_json(path)
+        profile_name = str(profile_payload.get("dataset") or path.stem)
+        core_stability_profiles.append(
+            {
+                "name": profile_name,
+                "path": path.as_posix(),
+                "payload": profile_payload,
+            }
+        )
+
     payload = evaluate_guardrails(
         candidate_synthetic=candidate_synthetic,
         candidate_realistic=candidate_realistic,
         candidate_stress=candidate_stress,
         ann_hybrid=ann_hybrid,
         candidate_benchmark=candidate_benchmark,
+        core_stability_profiles=core_stability_profiles,
         allow_known_fast_loss=not bool(args.strict_fast_profile),
         candidate_active_speed_warn_floor=float(args.candidate_active_speed_warn_floor),
         ann_active_speed_warn_floor=float(args.ann_active_speed_warn_floor),

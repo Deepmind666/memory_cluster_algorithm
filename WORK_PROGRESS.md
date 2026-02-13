@@ -2426,3 +2426,31 @@
   - [x] DMG 激活度指标加入统计与报告
   - [x] 证据命令目录同步新增 5000 稳定性命令
   - [x] 全量自查通过
+
+## Entry R-041-Guardrail-CoreStability-ResumeSmoke
+- Timestamp: 2026-02-14 01:35:00 +08:00
+- Stage: 下一轮推进（Stage-2 完整性门禁 + resume 失配烟雾测试）
+- Actions:
+  - 升级 `scripts/run_stage2_guardrail.py`：
+    - 新增可重复参数 `--core-stability <path>`；
+    - 对指定稳定性结果新增 blocker 级完整性检查（`is_complete=true`）；
+    - 输出新增 `core_stability` 汇总（`profile_count`、`incomplete_count`、profile 列表）。
+  - 增加测试覆盖：
+    - `tests/test_stage2_guardrail.py` 新增 2 个用例（core-stability pass/fail）。
+    - 新增 `tests/test_core_claim_stability_resume_smoke.py`（CLI 烟雾测试：`--resume` 签名失配必须失败）。
+  - 文档与证据链同步：
+    - `README.md` 增加带 core-stability 的门禁命令。
+    - `scripts/build_patent_evidence_pack.py` 的 `CMD_STAGE2_GUARDRAIL` 同步加上 core-stability 输入；
+    - DF-06 增加 `stage2_guardrail_core_stability_profile_count` 与 `stage2_guardrail_core_stability_incomplete_count`。
+    - 新增外部评审摘要：`docs/review/r041_core_stability_guardrail_resume_smoke_summary.md`（含 5000-stress 运行成本与分批理由）。
+- Verification:
+  - `python -m unittest tests.test_stage2_guardrail tests.test_core_claim_stability_resume_smoke -v` PASS (`7/7`)
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`98/98`)
+  - `python -m compileall -q src scripts tests` PASS
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md --core-stability outputs/core_claim_stability_semi_real_5000_realistic.json --core-stability outputs/core_claim_stability_semi_real_5000_stress.json` PASS (`check_count=14`, `blocker_failures=0`, `warning_failures=1`)
+- Review Checklist:
+  - [x] Stage-2 可选 core-stability 完整性门禁落地
+  - [x] `--resume` 签名失配路径存在可复现烟雾测试
+  - [x] 证据命令目录与报告命令一致
+  - [x] 外部评审摘要补齐运行成本与分批理由
+  - [x] 全量自查通过

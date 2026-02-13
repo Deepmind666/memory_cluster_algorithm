@@ -257,3 +257,21 @@ Next:
 1. Add stage2 guardrail optional checker for core stability completeness (`is_complete=true` on selected benchmark profiles).
 2. Add CI-friendly smoke test for checkpoint signature mismatch path (`--resume` with wrong dataset/thresholds should fail).
 3. Prepare R-040 evidence summary for external review package (include 5000-stress runtime cost and batching rationale).
+
+## R-041 Plan Update (2026-02-14)
+Completed:
+- Added optional core-stability completeness checks to `run_stage2_guardrail.py`:
+  - new CLI arg (repeatable): `--core-stability <path>`
+  - blocker checks enforce `is_complete=true` for selected stability profiles.
+- Added CI-friendly checkpoint mismatch smoke test:
+  - `tests/test_core_claim_stability_resume_smoke.py`
+  - validates `run_core_claim_stability.py --resume` fails on signature mismatch.
+- Expanded stage-2 guardrail unit coverage:
+  - `tests/test_stage2_guardrail.py` now includes pass/fail cases for optional core-stability checks.
+- Synced reproducibility commands:
+  - `README.md` and evidence command catalog now include `run_stage2_guardrail.py` with two 5000-scale core-stability inputs.
+
+Next:
+1. Add one CLI integration test for `run_stage2_guardrail.py` that verifies `--core-stability` path parsing and output fields end-to-end.
+2. Add optional weekly stability rerun checklist item in stage2/nightly process docs (avoid stale `is_complete` evidence).
+3. Keep ANN frozen as optional implementation unless active profile positive speedup becomes stable across repeated runs.

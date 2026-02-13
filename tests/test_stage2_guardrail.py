@@ -35,6 +35,18 @@ def _ann_payload(quality_ok: bool, runtime_signature_ok: bool) -> dict:
     }
 
 
+def _core_stability_payload(*, is_complete: bool, runs_completed: int, runs: int, dataset: str) -> dict:
+    return {
+        "name": dataset,
+        "payload": {
+            "dataset": dataset,
+            "is_complete": bool(is_complete),
+            "runs_completed": int(runs_completed),
+            "runs": int(runs),
+        },
+    }
+
+
 class TestStage2Guardrail(unittest.TestCase):
     def test_passes_with_known_fast_loss_allowed(self) -> None:
         payload = evaluate_guardrails(
@@ -90,6 +102,60 @@ class TestStage2Guardrail(unittest.TestCase):
         self.assertTrue((payload.get("summary") or {}).get("passed"))
         check_names = {str(item.get("name")) for item in (payload.get("checks") or [])}
         self.assertNotIn("candidate_benchmark_active_quality", check_names)
+
+    def test_optional_core_stability_checks_pass_when_complete(self) -> None:
+        payload = evaluate_guardrails(
+            candidate_synthetic=_candidate_payload(default_ok=True, fast_n240_ok=False),
+            candidate_realistic=_candidate_payload(default_ok=True, fast_n240_ok=True),
+            candidate_stress=_candidate_payload(default_ok=True, fast_n240_ok=True),
+            ann_hybrid=_ann_payload(quality_ok=True, runtime_signature_ok=True),
+            candidate_benchmark={"active_quality_gate_pass": True},
+            core_stability_profiles=[
+                _core_stability_payload(
+                    is_complete=True,
+                    runs_completed=6,
+                    runs=6,
+                    dataset="semi_real_5000_realistic",
+                ),
+                _core_stability_payload(
+                    is_complete=True,
+                    runs_completed=3,
+                    runs=3,
+                    dataset="semi_real_5000_stress",
+                ),
+            ],
+            allow_known_fast_loss=True,
+        )
+        self.assertTrue((payload.get("summary") or {}).get("passed"))
+        core = payload.get("core_stability") or {}
+        self.assertEqual(core.get("profile_count"), 2)
+        self.assertEqual(core.get("incomplete_count"), 0)
+
+    def test_core_stability_incomplete_is_blocker(self) -> None:
+        payload = evaluate_guardrails(
+            candidate_synthetic=_candidate_payload(default_ok=True, fast_n240_ok=False),
+            candidate_realistic=_candidate_payload(default_ok=True, fast_n240_ok=True),
+            candidate_stress=_candidate_payload(default_ok=True, fast_n240_ok=True),
+            ann_hybrid=_ann_payload(quality_ok=True, runtime_signature_ok=True),
+            candidate_benchmark={"active_quality_gate_pass": True},
+            core_stability_profiles=[
+                _core_stability_payload(
+                    is_complete=False,
+                    runs_completed=1,
+                    runs=3,
+                    dataset="semi_real_5000_stress",
+                ),
+            ],
+            allow_known_fast_loss=True,
+        )
+        self.assertFalse((payload.get("summary") or {}).get("passed"))
+        self.assertEqual((payload.get("core_stability") or {}).get("incomplete_count"), 1)
+        failed_blockers = {
+            str(item.get("name"))
+            for item in (payload.get("checks") or [])
+            if item.get("severity") == "blocker" and not item.get("passed")
+        }
+        self.assertIn("core_stability_complete_semi_real_5000_stress", failed_blockers)
 
 
 if __name__ == "__main__":
