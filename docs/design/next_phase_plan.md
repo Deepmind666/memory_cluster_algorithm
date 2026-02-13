@@ -137,3 +137,18 @@ Next:
 1. Keep `stage2-quality-gate` as required status check for `main` branch protection.
 2. Monitor release-gate failures for one week; adjust `max-age-hours` only if process latency requires it.
 3. If needed, add optional changelog artifact upload to the release workflow.
+
+## R-033 Plan Update (2026-02-13)
+Completed:
+- Closed P1 CI output-path isolation:
+  - `run_ci_guardrail_bundle.py` writes CI JSON outputs to `outputs/ci_outputs/`.
+  - Guardrail invocation in CI bundle reads candidate/ANN inputs from `outputs/ci_outputs/`.
+- Synced workflows:
+  - `stage2-quality-gate.yml` uploads `outputs/ci_outputs/*.json`.
+  - `stage2-nightly-trend.yml` reads trend input from `outputs/ci_outputs/stage2_guardrail.json`.
+- Added regression test coverage for command path isolation in `test_ci_guardrail_bundle_unit.py`.
+
+Next:
+1. Run one full GitHub Actions cycle to verify artifact layout and trend ingestion on hosted runner.
+2. Keep full-scale authoritative outputs in `outputs/` root and CI outputs in `outputs/ci_outputs/` only.
+3. If stable for one week, enforce a checklist item that rejects CI scripts writing benchmark JSON to `outputs/` root.

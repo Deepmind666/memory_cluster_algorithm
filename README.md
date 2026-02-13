@@ -69,7 +69,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0
 ```
 - 门禁输出：
-  - `outputs/stage2_guardrail.json`
+  - `outputs/ci_outputs/stage2_guardrail.json`
   - `outputs/ci_reports/stage2_guardrail_report.md`
 
 ### Stage-2 趋势追踪（Nightly）
@@ -77,7 +77,7 @@ python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragmen
 - 本地可复现：
 ```powershell
 python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 3 --warmup-runs 1
-python scripts/update_guardrail_trend.py --input outputs/stage2_guardrail.json --output outputs/stage2_guardrail_trend.json --label local --retain 90
+python scripts/update_guardrail_trend.py --input outputs/ci_outputs/stage2_guardrail.json --output outputs/stage2_guardrail_trend.json --label local --retain 90
 ```
 - 趋势文件：
   - `outputs/stage2_guardrail_trend.json`

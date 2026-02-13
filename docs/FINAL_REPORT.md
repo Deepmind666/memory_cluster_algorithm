@@ -4,7 +4,7 @@
 
 ## 1. 褰撳墠鐘舵€?- 鏍稿績绠楁硶涓荤嚎绋冲畾锛歚CEG + ARB + DMG + 鍐茬獊璇箟绮惧害`銆?- Candidate 宸插畬鎴愨€滈粯璁ら浂鎹熷け妗ｂ€濅笌鈥滈珮鎬ц兘瀹為獙妗ｂ€濆垎灞傜鐞嗐€?- ANN 宸插畬鎴愯瘖鏂彛寰勫榻愶細鎶ュ憡鍚屾椂缁欏嚭 `fragment-level` 涓?`cluster-entry-level`锛屼笉鍐嶆贩娣嗏€滄姤鍛婂け璐ヤ絾杩愯姝ｅ父鈥濄€?- 涓撳埄璇佹嵁鍖呭彲鑷姩閲嶅缓骞舵牎楠岋細`outputs/patent_evidence_pack.json`銆?
 ## 2. 鑷煡缁撴灉
-1. `python -m unittest discover -s tests -p "test_*.py"`锛歚74/74` 閫氳繃  
+1. `python -m unittest discover -s tests -p "test_*.py"`锛歚80/80` 閫氳繃  
 2. `python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md --fragment-count 240 --runs 10 --warmup-runs 2`锛氶€氳繃  
 3. 鍏抽敭杈撳嚭宸叉洿鏂帮細`outputs/ann_hybrid_benchmark.json`銆乣docs/eval/ann_hybrid_benchmark_report.md`
 
@@ -92,7 +92,17 @@
   - `tests/test_guardrail_trend_unit.py`
 - Local trend output generated:
   - `outputs/stage2_guardrail_trend.json`
-- Current total tests: `74/74`.
+- Current total tests: `80/80`.
+
+## R-033 Delta (2026-02-13)
+- Fixed CI output-path isolation P1:
+  - `scripts/run_ci_guardrail_bundle.py` now writes all CI benchmark/guardrail JSON to `outputs/ci_outputs/*.json`.
+  - `run_stage2_guardrail.py` in CI bundle now consumes all inputs from `outputs/ci_outputs/`.
+- Workflow alignment:
+  - `.github/workflows/stage2-quality-gate.yml` artifact paths switched to `outputs/ci_outputs/*.json`.
+  - `.github/workflows/stage2-nightly-trend.yml` trend input switched to `outputs/ci_outputs/stage2_guardrail.json`.
+- Regression protection:
+  - `tests/test_ci_guardrail_bundle_unit.py` added command-level path isolation assertion.
 
 ## R-032 Delta (2026-02-13)
 - Added release gate workflow:

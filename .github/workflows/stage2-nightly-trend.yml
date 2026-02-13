@@ -40,7 +40,7 @@ jobs:
       - name: Update Guardrail Trend
         run: |
           python scripts/update_guardrail_trend.py \
-            --input outputs/stage2_guardrail.json \
+            --input outputs/ci_outputs/stage2_guardrail.json \
             --output outputs/stage2_guardrail_trend.json \
             --label nightly \
             --retain 90
@@ -51,7 +51,7 @@ jobs:
         with:
           name: stage2-nightly-trend
           path: |
-            outputs/stage2_guardrail.json
+            outputs/ci_outputs/stage2_guardrail.json
             outputs/stage2_guardrail_trend.json
             outputs/ci_reports/stage2_guardrail_report.md
             outputs/ci_reports/candidate_filter_benchmark_report.md

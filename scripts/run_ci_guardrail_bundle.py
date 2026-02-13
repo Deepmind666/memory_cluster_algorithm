@@ -72,6 +72,139 @@ def _write_semi_real_dataset(path: Path, *, fragment_count: int, seed: int, prof
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _build_bundle_commands(
+    *,
+    py: str,
+    frag_count: int,
+    size: int,
+    runs: int,
+    warmups: int,
+    realistic_dataset: Path,
+    stress_dataset: Path,
+    ci_outputs: Path,
+    ci_reports: Path,
+) -> list[list[str]]:
+    candidate_benchmark = ci_outputs / "candidate_filter_benchmark.json"
+    candidate_synthetic = ci_outputs / "candidate_profile_validation_synthetic_active.json"
+    candidate_realistic = ci_outputs / "candidate_profile_validation_realistic.json"
+    candidate_stress = ci_outputs / "candidate_profile_validation_stress.json"
+    ann_hybrid = ci_outputs / "ann_hybrid_benchmark.json"
+    stage2_guardrail = ci_outputs / "stage2_guardrail.json"
+
+    return [
+        [
+            py,
+            "scripts/run_candidate_filter_benchmark.py",
+            "--output",
+            candidate_benchmark.as_posix(),
+            "--report",
+            (ci_reports / "candidate_filter_benchmark_report.md").as_posix(),
+            "--fragment-count",
+            str(frag_count),
+            "--runs",
+            str(runs),
+            "--warmup-runs",
+            str(warmups),
+        ],
+        [
+            py,
+            "scripts/run_candidate_profile_validation.py",
+            "--dataset-label",
+            "synthetic_active_ci",
+            "--output",
+            candidate_synthetic.as_posix(),
+            "--report",
+            (ci_reports / "candidate_profile_validation_synthetic_active_report.md").as_posix(),
+            "--sizes",
+            str(size),
+            "--runs",
+            str(runs),
+            "--warmup-runs",
+            str(warmups),
+            "--similarity-threshold",
+            "0.82",
+            "--merge-threshold",
+            "0.85",
+        ],
+        [
+            py,
+            "scripts/run_candidate_profile_validation.py",
+            "--dataset-input",
+            realistic_dataset.as_posix(),
+            "--dataset-label",
+            "semi_real_realistic_ci",
+            "--output",
+            candidate_realistic.as_posix(),
+            "--report",
+            (ci_reports / "candidate_profile_validation_realistic_report.md").as_posix(),
+            "--sizes",
+            str(size),
+            "--runs",
+            str(runs),
+            "--warmup-runs",
+            str(warmups),
+            "--similarity-threshold",
+            "0.68",
+            "--merge-threshold",
+            "0.82",
+        ],
+        [
+            py,
+            "scripts/run_candidate_profile_validation.py",
+            "--dataset-input",
+            stress_dataset.as_posix(),
+            "--dataset-label",
+            "semi_real_stress_ci",
+            "--output",
+            candidate_stress.as_posix(),
+            "--report",
+            (ci_reports / "candidate_profile_validation_stress_report.md").as_posix(),
+            "--sizes",
+            str(size),
+            "--runs",
+            str(runs),
+            "--warmup-runs",
+            str(warmups),
+            "--similarity-threshold",
+            "1.1",
+            "--merge-threshold",
+            "0.05",
+        ],
+        [
+            py,
+            "scripts/run_ann_hybrid_benchmark.py",
+            "--output",
+            ann_hybrid.as_posix(),
+            "--report",
+            (ci_reports / "ann_hybrid_benchmark_report.md").as_posix(),
+            "--fragment-count",
+            str(frag_count),
+            "--runs",
+            str(runs),
+            "--warmup-runs",
+            str(warmups),
+        ],
+        [
+            py,
+            "scripts/run_stage2_guardrail.py",
+            "--candidate-synthetic",
+            candidate_synthetic.as_posix(),
+            "--candidate-realistic",
+            candidate_realistic.as_posix(),
+            "--candidate-stress",
+            candidate_stress.as_posix(),
+            "--ann-hybrid",
+            ann_hybrid.as_posix(),
+            "--candidate-benchmark",
+            candidate_benchmark.as_posix(),
+            "--output",
+            stage2_guardrail.as_posix(),
+            "--report",
+            (ci_reports / "stage2_guardrail_report.md").as_posix(),
+        ],
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run lightweight stage-2 guardrail bundle for CI")
     parser.add_argument("--python", default=sys.executable, help="Python interpreter path")
@@ -90,6 +223,8 @@ def main() -> int:
 
     outputs = Path("outputs")
     outputs.mkdir(parents=True, exist_ok=True)
+    ci_outputs = outputs / "ci_outputs"
+    ci_outputs.mkdir(parents=True, exist_ok=True)
     ci_reports = outputs / "ci_reports"
     ci_reports.mkdir(parents=True, exist_ok=True)
 
@@ -98,120 +233,22 @@ def main() -> int:
     _write_semi_real_dataset(realistic_dataset, fragment_count=size, seed=int(args.seed), profile="realistic")
     _write_semi_real_dataset(stress_dataset, fragment_count=size, seed=int(args.seed), profile="stress")
 
-    _run(
-        [
-            py,
-            "scripts/run_candidate_filter_benchmark.py",
-            "--output",
-            "outputs/candidate_filter_benchmark.json",
-            "--report",
-            (ci_reports / "candidate_filter_benchmark_report.md").as_posix(),
-            "--fragment-count",
-            str(frag_count),
-            "--runs",
-            str(runs),
-            "--warmup-runs",
-            str(warmups),
-        ]
+    commands = _build_bundle_commands(
+        py=py,
+        frag_count=frag_count,
+        size=size,
+        runs=runs,
+        warmups=warmups,
+        realistic_dataset=realistic_dataset,
+        stress_dataset=stress_dataset,
+        ci_outputs=ci_outputs,
+        ci_reports=ci_reports,
     )
-    _run(
-        [
-            py,
-            "scripts/run_candidate_profile_validation.py",
-            "--dataset-label",
-            "synthetic_active_ci",
-            "--output",
-            "outputs/candidate_profile_validation_synthetic_active.json",
-            "--report",
-            (ci_reports / "candidate_profile_validation_synthetic_active_report.md").as_posix(),
-            "--sizes",
-            str(size),
-            "--runs",
-            str(runs),
-            "--warmup-runs",
-            str(warmups),
-            "--similarity-threshold",
-            "0.82",
-            "--merge-threshold",
-            "0.85",
-        ]
-    )
-    _run(
-        [
-            py,
-            "scripts/run_candidate_profile_validation.py",
-            "--dataset-input",
-            realistic_dataset.as_posix(),
-            "--dataset-label",
-            "semi_real_realistic_ci",
-            "--output",
-            "outputs/candidate_profile_validation_realistic.json",
-            "--report",
-            (ci_reports / "candidate_profile_validation_realistic_report.md").as_posix(),
-            "--sizes",
-            str(size),
-            "--runs",
-            str(runs),
-            "--warmup-runs",
-            str(warmups),
-            "--similarity-threshold",
-            "0.68",
-            "--merge-threshold",
-            "0.82",
-        ]
-    )
-    _run(
-        [
-            py,
-            "scripts/run_candidate_profile_validation.py",
-            "--dataset-input",
-            stress_dataset.as_posix(),
-            "--dataset-label",
-            "semi_real_stress_ci",
-            "--output",
-            "outputs/candidate_profile_validation_stress.json",
-            "--report",
-            (ci_reports / "candidate_profile_validation_stress_report.md").as_posix(),
-            "--sizes",
-            str(size),
-            "--runs",
-            str(runs),
-            "--warmup-runs",
-            str(warmups),
-            "--similarity-threshold",
-            "1.1",
-            "--merge-threshold",
-            "0.05",
-        ]
-    )
-    _run(
-        [
-            py,
-            "scripts/run_ann_hybrid_benchmark.py",
-            "--output",
-            "outputs/ann_hybrid_benchmark.json",
-            "--report",
-            (ci_reports / "ann_hybrid_benchmark_report.md").as_posix(),
-            "--fragment-count",
-            str(frag_count),
-            "--runs",
-            str(runs),
-            "--warmup-runs",
-            str(warmups),
-        ]
-    )
-    _run(
-        [
-            py,
-            "scripts/run_stage2_guardrail.py",
-            "--output",
-            "outputs/stage2_guardrail.json",
-            "--report",
-            (ci_reports / "stage2_guardrail_report.md").as_posix(),
-        ]
-    )
+    for command in commands:
+        _run(command)
 
-    result = _read_json(Path("outputs/stage2_guardrail.json"))
+    stage2_guardrail_path = ci_outputs / "stage2_guardrail.json"
+    result = _read_json(stage2_guardrail_path)
     passed = bool((result.get("summary") or {}).get("passed"))
     blockers = int((result.get("summary") or {}).get("blocker_failures") or 0)
     warnings = int((result.get("summary") or {}).get("warning_failures") or 0)
@@ -222,7 +259,7 @@ def main() -> int:
                 "stage2_guardrail_passed": passed,
                 "blocker_failures": blockers,
                 "warning_failures": warnings,
-                "guardrail_file": "outputs/stage2_guardrail.json",
+                "guardrail_file": stage2_guardrail_path.as_posix(),
             },
             ensure_ascii=False,
             indent=2,

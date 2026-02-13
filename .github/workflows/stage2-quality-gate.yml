@@ -45,13 +45,13 @@ jobs:
         with:
           name: stage2-guardrail
           path: |
-            outputs/stage2_guardrail.json
+            outputs/ci_outputs/stage2_guardrail.json
             outputs/ci_reports/stage2_guardrail_report.md
-            outputs/candidate_filter_benchmark.json
-            outputs/candidate_profile_validation_synthetic_active.json
-            outputs/candidate_profile_validation_realistic.json
-            outputs/candidate_profile_validation_stress.json
-            outputs/ann_hybrid_benchmark.json
+            outputs/ci_outputs/candidate_filter_benchmark.json
+            outputs/ci_outputs/candidate_profile_validation_synthetic_active.json
+            outputs/ci_outputs/candidate_profile_validation_realistic.json
+            outputs/ci_outputs/candidate_profile_validation_stress.json
+            outputs/ci_outputs/ann_hybrid_benchmark.json
             outputs/ci_reports/candidate_filter_benchmark_report.md
             outputs/ci_reports/candidate_profile_validation_synthetic_active_report.md
             outputs/ci_reports/candidate_profile_validation_realistic_report.md

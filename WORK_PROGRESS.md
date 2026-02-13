@@ -2190,3 +2190,34 @@
   - [x] 证据包一致性验证
   - [x] R-026 Opus 评审报告完成
   - [x] 工作规范体系 5 文件升级完成
+
+## Entry R-033-CI-Output-Isolation
+- Timestamp: 2026-02-13 12:28:24 +08:00
+- Stage: R-026 遗留 P1 收敛（CI 输出路径隔离）
+- Actions:
+  - 重构 `scripts/run_ci_guardrail_bundle.py`：
+    - 新增 `_build_bundle_commands()`，统一命令编排；
+    - Candidate/ANN/Guardrail JSON 输出全部改为 `outputs/ci_outputs/*.json`；
+    - CI guardrail 显式读取 `--candidate-*`、`--ann-hybrid`、`--candidate-benchmark` 的 `ci_outputs` 路径。
+  - 更新 workflow：
+    - `.github/workflows/stage2-quality-gate.yml` artifact JSON 路径切换至 `outputs/ci_outputs/`；
+    - `.github/workflows/stage2-nightly-trend.yml` 趋势输入切换至 `outputs/ci_outputs/stage2_guardrail.json`。
+  - 增强测试：
+    - `tests/test_ci_guardrail_bundle_unit.py` 新增路径隔离断言，防止回归写回 `outputs/` 根目录。
+  - 更新文档：
+    - `README.md` 本地复现命令与输出路径同步；
+    - `docs/FINAL_REPORT.md` 追加 R-033 Delta，并更新测试计数；
+    - `docs/design/next_phase_plan.md` 追加 R-033 Plan Update。
+- Verification:
+  - `python -m unittest tests.test_ci_guardrail_bundle_unit tests.test_stage2_guardrail tests.test_check_stage2_gate_for_sha_unit -v` PASS
+  - `python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`80/80`)
+  - `python -m compileall -q src scripts tests` PASS
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] CI JSON 输出与权威输出隔离完成
+  - [x] stage2-quality-gate artifact 路径同步
+  - [x] nightly trend 输入路径同步
+  - [x] 路径隔离单测新增并通过
+  - [x] 全量测试、编译、门禁、证据包自查通过

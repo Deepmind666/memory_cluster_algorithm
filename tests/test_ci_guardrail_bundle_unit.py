@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.run_ci_guardrail_bundle import _write_semi_real_dataset
+from scripts.run_ci_guardrail_bundle import _build_bundle_commands, _write_semi_real_dataset
 
 
 class TestCiGuardrailBundleUnit(unittest.TestCase):
@@ -29,6 +29,40 @@ class TestCiGuardrailBundleUnit(unittest.TestCase):
             _write_semi_real_dataset(path, fragment_count=10, seed=42, profile="stress")
             lines = path.read_text(encoding="utf-8").strip().splitlines()
             self.assertGreaterEqual(len(lines), 80)
+
+    def test_build_bundle_commands_isolates_ci_outputs(self) -> None:
+        ci_outputs = Path("outputs/ci_outputs")
+        ci_reports = Path("outputs/ci_reports")
+        commands = _build_bundle_commands(
+            py="python",
+            frag_count=120,
+            size=240,
+            runs=1,
+            warmups=0,
+            realistic_dataset=Path("outputs/ci_semi_real_240_realistic.jsonl"),
+            stress_dataset=Path("outputs/ci_semi_real_240_stress.jsonl"),
+            ci_outputs=ci_outputs,
+            ci_reports=ci_reports,
+        )
+        self.assertEqual(len(commands), 6)
+        outputs_seen: list[str] = []
+        for command in commands:
+            for idx, token in enumerate(command):
+                if token in {"--output", "--candidate-synthetic", "--candidate-realistic", "--candidate-stress", "--ann-hybrid", "--candidate-benchmark"}:
+                    outputs_seen.append(str(command[idx + 1]))
+        self.assertTrue(outputs_seen)
+        self.assertTrue(all(path.startswith("outputs/ci_outputs/") for path in outputs_seen))
+        self.assertFalse(any(path == "outputs/stage2_guardrail.json" for path in outputs_seen))
+
+        joined = [" ".join(item) for item in commands]
+        self.assertTrue(
+            any("--output outputs/ci_outputs/stage2_guardrail.json" in line for line in joined),
+            "stage2 guardrail output should be isolated to outputs/ci_outputs/",
+        )
+        self.assertTrue(
+            any("--candidate-benchmark outputs/ci_outputs/candidate_filter_benchmark.json" in line for line in joined),
+            "stage2 guardrail should consume candidate benchmark from outputs/ci_outputs/",
+        )
 
 
 if __name__ == "__main__":
