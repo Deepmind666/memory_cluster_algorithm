@@ -2145,7 +2145,7 @@
   - 更新 `docs/FINAL_REPORT.md` 与 `docs/design/next_phase_plan.md`：追加 R-032 Delta/Plan
 - Verification:
   - `python -m unittest tests.test_check_stage2_gate_for_sha_unit -v` PASS
-  - `python -m unittest discover -s tests -p "test_*.py"` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`79/79`)
   - `python -m compileall -q src scripts tests` PASS
 - Review Checklist:
   - [x] release workflow 添加且逻辑可读
@@ -2276,4 +2276,28 @@
   - [x] P1 门禁条款具备可执行判定标准
   - [x] 自动化检查脚本与清单条款已对齐
   - [x] 计划/报告/进度日志同步完成
+  - [x] 全量自查通过
+
+## Entry R-036-R027-Followup-Cleanup
+- Timestamp: 2026-02-13 13:17:06 +08:00
+- Stage: 下一轮推进（按 R-027 评审收敛文档遗留）
+- Actions:
+  - 修复 `FINAL_REPORT.md`：
+    - R-delta 顺序改为时间/编号一致（R-031 → R-032 → R-033 → R-034 → R-035）；
+    - R-031 历史测试快照修正为 `74/74`。
+  - 修复 `WORK_PROGRESS.md`：
+    - R-032 verification 行补全全量测试计数为 `79/79`。
+  - 同步 `docs/design/next_phase_plan.md` 与 `docs/FINAL_REPORT.md`，追加 R-036 更新条目。
+  - 同步 `.claude.md`，记录 R-036 自查结论。
+- Verification:
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`84/84`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] R-delta 顺序恢复为可审计时间序
+  - [x] R-031 测试计数历史快照修正
+  - [x] R-032 verification 全量测试计数补齐
+  - [x] 报告/计划/进度日志同步完成
   - [x] 全量自查通过

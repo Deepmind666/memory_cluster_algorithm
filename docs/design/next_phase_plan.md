@@ -180,3 +180,15 @@ Next:
 1. Keep collecting CI run evidence to verify zero false positives for the isolation checker.
 2. If stable, require the checker artifact in review attachments by default.
 3. Continue core algorithm track (CEG/ARB/DMG) while keeping CI/patent evidence pipeline stable.
+
+## R-036 Plan Update (2026-02-13)
+Completed:
+- Closed R-027 review leftovers:
+  - Fixed `FINAL_REPORT.md` R-delta ordering to chronological `R-031 -> R-032 -> R-033 -> R-034 -> R-035`.
+  - Corrected R-031 historical test count from `84/84` to `74/74`.
+  - Completed R-032 `WORK_PROGRESS.md` verification line with explicit full-test count (`79/79`).
+
+Next:
+1. Keep R-delta sections append-only and chronological to avoid review ambiguity.
+2. Keep each `WORK_PROGRESS` verification block with explicit full-test count.
+3. Continue algorithm-track improvements with current CI/patent evidence guardrails unchanged.

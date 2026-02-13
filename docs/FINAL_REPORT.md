@@ -92,7 +92,27 @@
   - `tests/test_guardrail_trend_unit.py`
 - Local trend output generated:
   - `outputs/stage2_guardrail_trend.json`
-- Current total tests: `84/84`.
+- Current total tests: `74/74`.
+
+## R-032 Delta (2026-02-13)
+- Added release gate workflow:
+  - `.github/workflows/release-with-stage2-gate.yml`
+- Added gate-check unit tests:
+  - `tests/test_check_stage2_gate_for_sha_unit.py`
+- Enforced release rule:
+  - `tag/release` is allowed only after target commit SHA passes `stage2-quality-gate` within the last 168 hours.
+- Local reproducibility:
+  - `python scripts/check_stage2_gate_for_sha.py --repo <owner/repo> --sha <commit_sha> --workflow-file stage2-quality-gate.yml --max-age-hours 168 --output outputs/release_gate_check.json`
+
+## R-033 Delta (2026-02-13)
+- Fixed CI output-path isolation P1:
+  - `scripts/run_ci_guardrail_bundle.py` now writes all CI benchmark/guardrail JSON to `outputs/ci_outputs/*.json`.
+  - `run_stage2_guardrail.py` in CI bundle now consumes all inputs from `outputs/ci_outputs/`.
+- Workflow alignment:
+  - `.github/workflows/stage2-quality-gate.yml` artifact paths switched to `outputs/ci_outputs/*.json`.
+  - `.github/workflows/stage2-nightly-trend.yml` trend input switched to `outputs/ci_outputs/stage2_guardrail.json`.
+- Regression protection:
+  - `tests/test_ci_guardrail_bundle_unit.py` added command-level path isolation assertion.
 
 ## R-034 Delta (2026-02-13)
 - Added CI output isolation guard script:
@@ -117,22 +137,8 @@
     - `violation_count=0`
     - both workflows include `Validate CI Output Isolation` step
 
-## R-033 Delta (2026-02-13)
-- Fixed CI output-path isolation P1:
-  - `scripts/run_ci_guardrail_bundle.py` now writes all CI benchmark/guardrail JSON to `outputs/ci_outputs/*.json`.
-  - `run_stage2_guardrail.py` in CI bundle now consumes all inputs from `outputs/ci_outputs/`.
-- Workflow alignment:
-  - `.github/workflows/stage2-quality-gate.yml` artifact paths switched to `outputs/ci_outputs/*.json`.
-  - `.github/workflows/stage2-nightly-trend.yml` trend input switched to `outputs/ci_outputs/stage2_guardrail.json`.
-- Regression protection:
-  - `tests/test_ci_guardrail_bundle_unit.py` added command-level path isolation assertion.
-
-## R-032 Delta (2026-02-13)
-- Added release gate workflow:
-  - `.github/workflows/release-with-stage2-gate.yml`
-- Added gate-check unit tests:
-  - `tests/test_check_stage2_gate_for_sha_unit.py`
-- Enforced release rule:
-  - `tag/release` is allowed only after target commit SHA passes `stage2-quality-gate` within the last 168 hours.
-- Local reproducibility:
-  - `python scripts/check_stage2_gate_for_sha.py --repo <owner/repo> --sha <commit_sha> --workflow-file stage2-quality-gate.yml --max-age-hours 168 --output outputs/release_gate_check.json`
+## R-036 Delta (2026-02-13)
+- R-027 review follow-up cleanup:
+  - Reordered R-delta sections to chronological order (`R-031 -> R-032 -> R-033 -> R-034 -> R-035`).
+  - Corrected R-031 historical test-count snapshot from `84/84` to `74/74`.
+  - Aligned R-032 progress record with explicit full-test count (`79/79`) in `WORK_PROGRESS.md`.
