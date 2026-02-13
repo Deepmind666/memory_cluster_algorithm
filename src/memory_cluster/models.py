@@ -143,7 +143,7 @@ class PreferenceConfig:
     enable_adaptive_budget: bool = False
     arb_conflict_weight: float = 0.45
     arb_entropy_weight: float = 0.25
-    arb_stale_penalty: float = 0.35
+    arb_stale_penalty: float = 0.25
     arb_min_scale: float = 0.7
     arb_max_scale: float = 1.6
     enable_dual_merge_guard: bool = False
@@ -153,12 +153,15 @@ class PreferenceConfig:
     enable_merge_candidate_filter: bool = False
     merge_candidate_bucket_dims: int = 10
     merge_candidate_max_neighbors: int = 48
+    merge_candidate_projection_steps: int = 32
+    merge_candidate_signature_radius: int = 4
     enable_merge_ann_candidates: bool = False
-    merge_ann_num_tables: int = 4
-    merge_ann_bits_per_table: int = 8
-    merge_ann_probe_radius: int = 0
-    merge_ann_max_neighbors: int = 24
+    merge_ann_num_tables: int = 3
+    merge_ann_bits_per_table: int = 10
+    merge_ann_probe_radius: int = 1
+    merge_ann_max_neighbors: int = 48
     merge_ann_score_dims: int = 32
+    merge_ann_projection_steps: int = 32
     hard_keep_tags: list[str] = field(default_factory=list)
     protected_path_prefixes: list[str] = field(default_factory=list)
     protected_scopes: list[str] = field(default_factory=lambda: ["global_task", "current_task"])
@@ -181,7 +184,7 @@ class PreferenceConfig:
             enable_adaptive_budget=bool(data.get("enable_adaptive_budget", False)),
             arb_conflict_weight=float(data.get("arb_conflict_weight", 0.45)),
             arb_entropy_weight=float(data.get("arb_entropy_weight", 0.25)),
-            arb_stale_penalty=float(data.get("arb_stale_penalty", 0.35)),
+            arb_stale_penalty=float(data.get("arb_stale_penalty", 0.25)),
             arb_min_scale=float(data.get("arb_min_scale", 0.7)),
             arb_max_scale=float(data.get("arb_max_scale", 1.6)),
             enable_dual_merge_guard=bool(data.get("enable_dual_merge_guard", False)),
@@ -191,12 +194,15 @@ class PreferenceConfig:
             enable_merge_candidate_filter=bool(data.get("enable_merge_candidate_filter", False)),
             merge_candidate_bucket_dims=max(1, int(data.get("merge_candidate_bucket_dims", 10))),
             merge_candidate_max_neighbors=max(1, int(data.get("merge_candidate_max_neighbors", 48))),
+            merge_candidate_projection_steps=max(1, int(data.get("merge_candidate_projection_steps", 32))),
+            merge_candidate_signature_radius=max(0, int(data.get("merge_candidate_signature_radius", 4))),
             enable_merge_ann_candidates=bool(data.get("enable_merge_ann_candidates", False)),
-            merge_ann_num_tables=max(1, int(data.get("merge_ann_num_tables", 4))),
-            merge_ann_bits_per_table=max(1, int(data.get("merge_ann_bits_per_table", 8))),
-            merge_ann_probe_radius=max(0, min(1, int(data.get("merge_ann_probe_radius", 0)))),
-            merge_ann_max_neighbors=max(1, int(data.get("merge_ann_max_neighbors", 24))),
+            merge_ann_num_tables=max(1, int(data.get("merge_ann_num_tables", 3))),
+            merge_ann_bits_per_table=max(1, int(data.get("merge_ann_bits_per_table", 10))),
+            merge_ann_probe_radius=max(0, min(1, int(data.get("merge_ann_probe_radius", 1)))),
+            merge_ann_max_neighbors=max(1, int(data.get("merge_ann_max_neighbors", 48))),
             merge_ann_score_dims=max(1, int(data.get("merge_ann_score_dims", 32))),
+            merge_ann_projection_steps=max(1, int(data.get("merge_ann_projection_steps", 32))),
             hard_keep_tags=[str(x) for x in (data.get("hard_keep_tags") or [])],
             protected_path_prefixes=[str(x) for x in (data.get("protected_path_prefixes") or [])],
             protected_scopes=[str(x) for x in (data.get("protected_scopes") or ["global_task", "current_task"])],

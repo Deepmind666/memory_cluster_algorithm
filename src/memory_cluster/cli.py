@@ -117,6 +117,10 @@ def cmd_build(args: argparse.Namespace) -> int:
         preference.merge_candidate_bucket_dims = max(1, int(args.merge_candidate_bucket_dims))
     if args.merge_candidate_max_neighbors is not None:
         preference.merge_candidate_max_neighbors = max(1, int(args.merge_candidate_max_neighbors))
+    if args.merge_candidate_projection_steps is not None:
+        preference.merge_candidate_projection_steps = max(1, int(args.merge_candidate_projection_steps))
+    if args.merge_candidate_signature_radius is not None:
+        preference.merge_candidate_signature_radius = max(0, int(args.merge_candidate_signature_radius))
     if args.enable_merge_ann_candidates:
         preference.enable_merge_ann_candidates = True
     if args.merge_ann_num_tables is not None:
@@ -129,6 +133,8 @@ def cmd_build(args: argparse.Namespace) -> int:
         preference.merge_ann_max_neighbors = max(1, int(args.merge_ann_max_neighbors))
     if args.merge_ann_score_dims is not None:
         preference.merge_ann_score_dims = max(1, int(args.merge_ann_score_dims))
+    if args.merge_ann_projection_steps is not None:
+        preference.merge_ann_projection_steps = max(1, int(args.merge_ann_projection_steps))
     if args.hard_keep_tag:
         preference.hard_keep_tags = list(dict.fromkeys(preference.hard_keep_tags + list(args.hard_keep_tag)))
     if args.protect_path_prefix:
@@ -221,12 +227,15 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--enable-merge-candidate-filter", action="store_true")
     build.add_argument("--merge-candidate-bucket-dims", type=int, default=None)
     build.add_argument("--merge-candidate-max-neighbors", type=int, default=None)
+    build.add_argument("--merge-candidate-projection-steps", type=int, default=None)
+    build.add_argument("--merge-candidate-signature-radius", type=int, default=None)
     build.add_argument("--enable-merge-ann-candidates", action="store_true")
     build.add_argument("--merge-ann-num-tables", type=int, default=None)
     build.add_argument("--merge-ann-bits-per-table", type=int, default=None)
     build.add_argument("--merge-ann-probe-radius", type=int, default=None)
     build.add_argument("--merge-ann-max-neighbors", type=int, default=None)
     build.add_argument("--merge-ann-score-dims", type=int, default=None)
+    build.add_argument("--merge-ann-projection-steps", type=int, default=None)
     build.add_argument("--hard-keep-tag", action="append", default=None)
     build.add_argument("--protect-path-prefix", action="append", default=None)
     build.add_argument("--protect-scope", action="append", default=None)

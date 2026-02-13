@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import itertools
 import math
 import re
 
@@ -13,6 +14,22 @@ class ClusterAssignment:
     cluster_id: str
     score: float
     created_new: bool
+
+
+@dataclass
+class _CandidateState:
+    signatures_by_id: dict[str, tuple[int, ...]]
+    bucket_to_ids: dict[tuple[int, ...], set[str]]
+    centroids_by_id: dict[str, list[float]]
+    neighbors: dict[str, set[str]]
+
+
+@dataclass
+class _AnnState:
+    signatures_by_id: dict[str, list[int]]
+    tables: list[dict[int, set[str]]]
+    vectors_by_id: dict[str, list[float]]
+    neighbors: dict[str, set[str]]
 
 
 class IncrementalClusterer:
@@ -30,12 +47,15 @@ class IncrementalClusterer:
         enable_merge_candidate_filter: bool = False,
         merge_candidate_bucket_dims: int = 10,
         merge_candidate_max_neighbors: int = 48,
+        merge_candidate_projection_steps: int = 32,
+        merge_candidate_signature_radius: int = 4,
         enable_merge_ann_candidates: bool = False,
-        merge_ann_num_tables: int = 4,
-        merge_ann_bits_per_table: int = 8,
-        merge_ann_probe_radius: int = 0,
-        merge_ann_max_neighbors: int = 24,
+        merge_ann_num_tables: int = 3,
+        merge_ann_bits_per_table: int = 10,
+        merge_ann_probe_radius: int = 1,
+        merge_ann_max_neighbors: int = 48,
         merge_ann_score_dims: int = 32,
+        merge_ann_projection_steps: int = 32,
     ) -> None:
         self.similarity_threshold = similarity_threshold
         self.merge_threshold = merge_threshold
@@ -47,12 +67,15 @@ class IncrementalClusterer:
         self.enable_merge_candidate_filter = enable_merge_candidate_filter
         self.merge_candidate_bucket_dims = max(1, int(merge_candidate_bucket_dims))
         self.merge_candidate_max_neighbors = max(1, int(merge_candidate_max_neighbors))
+        self.merge_candidate_projection_steps = max(1, int(merge_candidate_projection_steps))
+        self.merge_candidate_signature_radius = max(0, int(merge_candidate_signature_radius))
         self.enable_merge_ann_candidates = enable_merge_ann_candidates
         self.merge_ann_num_tables = max(1, int(merge_ann_num_tables))
         self.merge_ann_bits_per_table = max(1, int(merge_ann_bits_per_table))
         self.merge_ann_probe_radius = max(0, min(1, int(merge_ann_probe_radius)))
         self.merge_ann_max_neighbors = max(1, int(merge_ann_max_neighbors))
         self.merge_ann_score_dims = max(1, int(merge_ann_score_dims))
+        self.merge_ann_projection_steps = max(1, int(merge_ann_projection_steps))
         self._counter = 0
         self._id_pattern = re.compile(r"^cluster-(\d+)$")
         self.merge_attempts = 0
@@ -62,6 +85,9 @@ class IncrementalClusterer:
         self.merge_pairs_skipped_by_candidate_filter = 0
         self.merge_pairs_skipped_by_ann_candidates = 0
         self.merge_pairs_skipped_by_hybrid_candidates = 0
+        self.merge_candidate_filter_fallbacks = 0
+        self.merge_ann_candidate_fallbacks = 0
+        self._projection_plan_cache: dict[tuple[int, int, int], tuple[int, int, int, bool, int]] = {}
 
     def assign(
         self,
@@ -102,8 +128,10 @@ class IncrementalClusterer:
             return clusters
 
         active = list(clusters)
-        candidate_filter_neighbors = self._build_candidate_neighbors(active)
-        ann_neighbors = self._build_ann_candidate_neighbors(active)
+        candidate_state = self._build_candidate_state(active)
+        ann_state = self._build_ann_state(active)
+        candidate_filter_neighbors = candidate_state.neighbors if candidate_state is not None else None
+        ann_neighbors = ann_state.neighbors if ann_state is not None else None
         gate_mode = "none"
         if candidate_filter_neighbors is not None and ann_neighbors is not None:
             gate_mode = "hybrid"
@@ -170,8 +198,8 @@ class IncrementalClusterer:
                         base=base,
                         removed_cluster_id=removed_cluster_id,
                         gate_mode=gate_mode,
-                        candidate_filter_neighbors=candidate_filter_neighbors,
-                        ann_neighbors=ann_neighbors,
+                        candidate_state=candidate_state,
+                        ann_state=ann_state,
                     )
                     merged = True
             active = [item for item in active if item is not None]
@@ -244,124 +272,245 @@ class IncrementalClusterer:
             "merge_pairs_skipped_by_candidate_filter": int(self.merge_pairs_skipped_by_candidate_filter),
             "merge_pairs_skipped_by_ann_candidates": int(self.merge_pairs_skipped_by_ann_candidates),
             "merge_pairs_skipped_by_hybrid_candidates": int(self.merge_pairs_skipped_by_hybrid_candidates),
+            "merge_candidate_filter_fallbacks": int(self.merge_candidate_filter_fallbacks),
+            "merge_ann_candidate_fallbacks": int(self.merge_ann_candidate_fallbacks),
         }
 
     def _build_candidate_neighbors(self, clusters: list[MemoryCluster]) -> dict[str, set[str]] | None:
+        state = self._build_candidate_state(clusters)
+        return state.neighbors if state is not None else None
+
+    def _build_candidate_state(self, clusters: list[MemoryCluster]) -> _CandidateState | None:
         if not self.enable_merge_candidate_filter:
             return None
         if len(clusters) < 2:
-            return {}
+            return _CandidateState(signatures_by_id={}, bucket_to_ids={}, centroids_by_id={}, neighbors={})
 
         signatures: dict[str, tuple[int, ...]] = {}
-        bucket_to_ids: dict[tuple[int, ...], list[str]] = {}
-        for cluster in clusters:
-            signature = self._candidate_signature(cluster.centroid)
-            signatures[cluster.cluster_id] = signature
-            bucket_to_ids.setdefault(signature, []).append(cluster.cluster_id)
-
-        neighbors: dict[str, set[str]] = {}
-        centroid_by_id = {cluster.cluster_id: (cluster.centroid or []) for cluster in clusters}
-        explore_k = max(4, self.merge_candidate_max_neighbors)
+        bucket_to_ids: dict[tuple[int, ...], set[str]] = {}
+        centroids_by_id: dict[str, list[float]] = {}
         for cluster in clusters:
             cid = cluster.cluster_id
-            signature = signatures.get(cid) or ()
-            picked: list[str] = []
+            centroid = cluster.centroid or []
+            centroids_by_id[cid] = centroid
+            signature = self._candidate_signature(centroid)
+            signatures[cid] = signature
+            bucket_to_ids.setdefault(signature, set()).add(cid)
 
-            for peer_id in bucket_to_ids.get(signature, []):
-                if peer_id != cid:
-                    picked.append(peer_id)
+        unique_ratio, max_bucket_ratio = self._signature_bucket_quality(bucket_to_ids, total=len(clusters))
+        if unique_ratio < 0.18 or max_bucket_ratio > 0.90:
+            self.merge_candidate_filter_fallbacks += 1
+            return None
 
-            for adjacent in self._adjacent_signatures(signature):
-                if len(picked) >= self.merge_candidate_max_neighbors:
-                    break
-                for peer_id in bucket_to_ids.get(adjacent, []):
-                    if peer_id != cid:
-                        picked.append(peer_id)
-                        if len(picked) >= self.merge_candidate_max_neighbors:
-                            break
+        state = _CandidateState(
+            signatures_by_id=signatures,
+            bucket_to_ids=bucket_to_ids,
+            centroids_by_id=centroids_by_id,
+            neighbors={},
+        )
+        for cid in sorted(centroids_by_id.keys()):
+            state.neighbors[cid] = self._build_candidate_neighbors_from_state(cid, state)
+        return state
 
-            deduped = self._cap_neighbor_ids(picked, max(1, self.merge_candidate_max_neighbors * 3))
-            ranked = sorted(
-                deduped,
-                key=lambda peer_id: (
-                    -self._approx_cosine(centroid_by_id.get(cid) or [], centroid_by_id.get(peer_id) or []),
-                    peer_id,
-                ),
-            )
-            all_ranked = sorted(
-                [peer_id for peer_id in centroid_by_id.keys() if peer_id != cid],
-                key=lambda peer_id: (
-                    -self._approx_cosine(centroid_by_id.get(cid) or [], centroid_by_id.get(peer_id) or []),
-                    peer_id,
-                ),
-            )
-            exploratory = all_ranked[:explore_k]
-            merged = self._cap_neighbor_ids(ranked + exploratory, max(1, self.merge_candidate_max_neighbors * 6))
-            merged_ranked = sorted(
-                merged,
-                key=lambda peer_id: (
-                    -self._approx_cosine(centroid_by_id.get(cid) or [], centroid_by_id.get(peer_id) or []),
-                    peer_id,
-                ),
-            )
-            neighbors[cid] = set(self._cap_neighbor_ids(merged_ranked, self.merge_candidate_max_neighbors))
-        return neighbors
+    def _build_candidate_neighbors_from_state(self, base_cluster_id: str, state: _CandidateState) -> set[str]:
+        signature = state.signatures_by_id.get(base_cluster_id) or ()
+        candidate_ids = self._collect_bucket_candidates(
+            base_cluster_id=base_cluster_id,
+            signature=signature,
+            bucket_to_ids=state.bucket_to_ids,
+            max_hamming_distance=self.merge_candidate_signature_radius,
+        )
+        if not candidate_ids:
+            return set()
+        base_vector = state.centroids_by_id.get(base_cluster_id) or []
+        ranked = sorted(
+            candidate_ids,
+            key=lambda peer_id: (
+                -self._approx_cosine(base_vector, state.centroids_by_id.get(peer_id) or []),
+                peer_id,
+            ),
+        )
+        return set(self._cap_neighbor_ids(ranked, self.merge_candidate_max_neighbors))
 
-    def _build_ann_candidate_neighbors(self, clusters: list[MemoryCluster]) -> dict[str, set[str]] | None:
+    def _candidate_state_drop_cluster(self, state: _CandidateState, cluster_id: str) -> None:
+        old_signature = state.signatures_by_id.pop(cluster_id, None)
+        if old_signature is not None:
+            bucket = state.bucket_to_ids.get(old_signature)
+            if bucket is not None:
+                bucket.discard(cluster_id)
+                if not bucket:
+                    state.bucket_to_ids.pop(old_signature, None)
+        state.centroids_by_id.pop(cluster_id, None)
+        state.neighbors.pop(cluster_id, None)
+
+    def _candidate_state_upsert_cluster(self, state: _CandidateState, cluster_id: str, centroid: list[float]) -> None:
+        new_signature = self._candidate_signature(centroid)
+        old_signature = state.signatures_by_id.get(cluster_id)
+        if old_signature is not None and old_signature != new_signature:
+            old_bucket = state.bucket_to_ids.get(old_signature)
+            if old_bucket is not None:
+                old_bucket.discard(cluster_id)
+                if not old_bucket:
+                    state.bucket_to_ids.pop(old_signature, None)
+        state.signatures_by_id[cluster_id] = new_signature
+        state.bucket_to_ids.setdefault(new_signature, set()).add(cluster_id)
+        state.centroids_by_id[cluster_id] = list(centroid)
+
+    def _build_ann_candidate_neighbors(
+        self,
+        clusters: list[MemoryCluster],
+        ann_signature_cache: dict[str, list[int]] | None = None,
+    ) -> dict[str, set[str]] | None:
+        state = self._build_ann_state(clusters, ann_signature_cache=ann_signature_cache)
+        return state.neighbors if state is not None else None
+
+    def _build_ann_state(
+        self,
+        clusters: list[MemoryCluster],
+        ann_signature_cache: dict[str, list[int]] | None = None,
+    ) -> _AnnState | None:
         if not self.enable_merge_ann_candidates:
             return None
         if len(clusters) < 2:
-            return {}
+            return _AnnState(signatures_by_id={}, tables=[], vectors_by_id={}, neighbors={})
 
-        vectors: dict[str, list[float]] = {cluster.cluster_id: (cluster.centroid or []) for cluster in clusters}
-        tables: list[dict[int, list[str]]] = [{} for _ in range(self.merge_ann_num_tables)]
-        signatures_by_id: dict[str, list[int]] = {}
+        vectors_by_id: dict[str, list[float]] = {cluster.cluster_id: (cluster.centroid or []) for cluster in clusters}
+        signatures_by_id = ann_signature_cache or self._build_ann_signature_cache(clusters)
+        quality = self._ann_signature_quality(signatures_by_id)
+        if quality["unique_ratio"] < 0.18 or quality["max_bucket_ratio"] > 0.90:
+            self.merge_ann_candidate_fallbacks += 1
+            return None
+
+        tables = self._build_ann_tables(signatures_by_id)
+        state = _AnnState(
+            signatures_by_id={cid: list(values) for cid, values in signatures_by_id.items()},
+            tables=tables,
+            vectors_by_id=vectors_by_id,
+            neighbors={},
+        )
+        for cid in sorted(vectors_by_id.keys()):
+            state.neighbors[cid] = self._build_ann_neighbors_from_state(cid, state)
+        return state
+
+    def _build_ann_neighbors_from_state(self, base_cluster_id: str, state: _AnnState) -> set[str]:
+        base_signatures = state.signatures_by_id.get(base_cluster_id) or []
+        candidates: set[str] = set()
+        for table_idx, signature in enumerate(base_signatures):
+            if table_idx >= len(state.tables):
+                break
+            for probe in self._ann_probe_signatures(signature):
+                for peer_id in state.tables[table_idx].get(probe, set()):
+                    if peer_id != base_cluster_id:
+                        candidates.add(peer_id)
+
+        if not candidates:
+            return set()
+
+        base_vector = state.vectors_by_id.get(base_cluster_id) or []
+        ranked = sorted(
+            candidates,
+            key=lambda peer_id: (
+                -self._approx_cosine(base_vector, state.vectors_by_id.get(peer_id) or []),
+                peer_id,
+            ),
+        )
+        return set(self._cap_neighbor_ids(ranked, self.merge_ann_max_neighbors))
+
+    def _ann_state_drop_cluster(self, state: _AnnState, cluster_id: str) -> None:
+        signatures = state.signatures_by_id.pop(cluster_id, None)
+        if signatures is not None:
+            for table_idx, signature in enumerate(signatures):
+                if table_idx >= len(state.tables):
+                    break
+                bucket = state.tables[table_idx].get(int(signature))
+                if bucket is None:
+                    continue
+                bucket.discard(cluster_id)
+                if not bucket:
+                    state.tables[table_idx].pop(int(signature), None)
+        state.vectors_by_id.pop(cluster_id, None)
+        state.neighbors.pop(cluster_id, None)
+
+    def _ann_state_upsert_cluster(self, state: _AnnState, cluster_id: str, vector: list[float]) -> None:
+        old_signatures = state.signatures_by_id.get(cluster_id)
+        if old_signatures is not None:
+            for table_idx, signature in enumerate(old_signatures):
+                if table_idx >= len(state.tables):
+                    break
+                bucket = state.tables[table_idx].get(int(signature))
+                if bucket is None:
+                    continue
+                bucket.discard(cluster_id)
+                if not bucket:
+                    state.tables[table_idx].pop(int(signature), None)
+
+        new_signatures = [self._ann_signature(vector, table_idx) for table_idx in range(self.merge_ann_num_tables)]
+        state.signatures_by_id[cluster_id] = new_signatures
+        state.vectors_by_id[cluster_id] = list(vector)
+        while len(state.tables) < self.merge_ann_num_tables:
+            state.tables.append({})
+        for table_idx, signature in enumerate(new_signatures):
+            state.tables[table_idx].setdefault(int(signature), set()).add(cluster_id)
+
+    def _build_ann_signature_cache(self, clusters: list[MemoryCluster]) -> dict[str, list[int]]:
+        cache: dict[str, list[int]] = {}
         for cluster in clusters:
-            cid = cluster.cluster_id
-            vector = vectors.get(cid) or []
-            signatures: list[int] = []
+            vector = cluster.centroid or []
+            cache[cluster.cluster_id] = [self._ann_signature(vector, table_idx) for table_idx in range(self.merge_ann_num_tables)]
+        return cache
+
+    def _build_ann_tables(self, signatures_by_id: dict[str, list[int]]) -> list[dict[int, set[str]]]:
+        tables: list[dict[int, set[str]]] = [{} for _ in range(self.merge_ann_num_tables)]
+        for cluster_id, signatures in signatures_by_id.items():
             for table_idx in range(self.merge_ann_num_tables):
-                signature = self._ann_signature(vector, table_idx)
-                signatures.append(signature)
-                tables[table_idx].setdefault(signature, []).append(cid)
-            signatures_by_id[cid] = signatures
+                signature = int(signatures[table_idx]) if table_idx < len(signatures) else 0
+                tables[table_idx].setdefault(signature, set()).add(cluster_id)
+        return tables
 
-        neighbors: dict[str, set[str]] = {}
-        for cluster in clusters:
-            cid = cluster.cluster_id
-            candidates: set[str] = set()
-            for table_idx, signature in enumerate(signatures_by_id.get(cid) or []):
-                probes = self._ann_probe_signatures(signature)
-                for probe in probes:
-                    for peer_id in tables[table_idx].get(probe, []):
-                        if peer_id != cid:
-                            candidates.add(peer_id)
+    def _ann_signature_quality(self, signatures_by_id: dict[str, list[int]]) -> dict[str, float]:
+        total = max(1, len(signatures_by_id))
+        unique_ratios: list[float] = []
+        max_bucket_ratios: list[float] = []
+        for table_idx in range(self.merge_ann_num_tables):
+            counts: dict[int, int] = {}
+            for signatures in signatures_by_id.values():
+                signature = int(signatures[table_idx]) if table_idx < len(signatures) else 0
+                counts[signature] = counts.get(signature, 0) + 1
+            unique_ratios.append(len(counts) / float(total))
+            max_bucket_ratios.append(max(counts.values()) / float(total))
+        return {
+            "unique_ratio": float(min(unique_ratios) if unique_ratios else 0.0),
+            "max_bucket_ratio": float(max(max_bucket_ratios) if max_bucket_ratios else 1.0),
+        }
 
-            if not candidates:
-                neighbors[cid] = set()
-                continue
-
-            ranked = sorted(
-                candidates,
-                key=lambda peer_id: (
-                    -self._approx_cosine(
-                        vectors.get(cid) or [],
-                        vectors.get(peer_id) or [],
-                    ),
-                    peer_id,
-                ),
-            )
-            neighbors[cid] = set(self._cap_neighbor_ids(ranked, self.merge_ann_max_neighbors))
-        return neighbors
+    def _signature_bucket_quality(
+        self,
+        bucket_to_ids: dict[tuple[int, ...], set[str]],
+        *,
+        total: int,
+    ) -> tuple[float, float]:
+        all_total = max(1, int(total))
+        unique_ratio = len(bucket_to_ids) / float(all_total)
+        largest_bucket = max((len(ids) for ids in bucket_to_ids.values()), default=0)
+        max_bucket_ratio = largest_bucket / float(all_total)
+        return float(unique_ratio), float(max_bucket_ratio)
 
     def _ann_signature(self, vector: list[float], table_idx: int) -> int:
-        values: list[float] = []
-        for bit_idx in range(self.merge_ann_bits_per_table):
-            values.append(self._bucket_value(vector, seed_a=(table_idx + 1) * 911, seed_b=(bit_idx + 1) * 3571))
-        threshold = self._median(values)
+        if not vector:
+            return 0
+        mean_value = self._vector_mean(vector)
         signature = 0
         for bit_idx in range(self.merge_ann_bits_per_table):
-            if values[bit_idx] > threshold:
+            seed = self._mix64(
+                ((table_idx + 1) * 911_382_323) ^ ((bit_idx + 1) * 3_571_231) ^ (len(vector) * 1_315_423_911)
+            )
+            score = self._projection_score(
+                vector,
+                seed=seed,
+                steps=self.merge_ann_projection_steps,
+                mean_value=mean_value,
+            )
+            if score >= 0.0:
                 signature |= (1 << bit_idx)
         return signature
 
@@ -393,13 +542,17 @@ class IncrementalClusterer:
     def _candidate_signature(self, vector: list[float]) -> tuple[int, ...]:
         if not vector:
             return ()
-        values: list[float] = []
-        for bit_idx in range(self.merge_candidate_bucket_dims):
-            values.append(self._bucket_value(vector, seed_a=613, seed_b=(bit_idx + 1) * 1543))
-        threshold = self._median(values)
+        mean_value = self._vector_mean(vector)
         output: list[int] = []
-        for value in values:
-            output.append(1 if value > threshold else 0)
+        for bit_idx in range(self.merge_candidate_bucket_dims):
+            seed = self._mix64((613 * 2_654_435_761) ^ ((bit_idx + 1) * 1_543_271) ^ (len(vector) * 131))
+            score = self._projection_score(
+                vector,
+                seed=seed,
+                steps=self.merge_candidate_projection_steps,
+                mean_value=mean_value,
+            )
+            output.append(1 if score >= 0.0 else 0)
         return tuple(output)
 
     def _adjacent_signatures(self, signature: tuple[int, ...]) -> list[tuple[int, ...]]:
@@ -411,6 +564,39 @@ class IncrementalClusterer:
             row[idx] = 1 - row[idx]
             output.append(tuple(row))
         return output
+
+    def _two_hop_signatures(self, signature: tuple[int, ...]) -> list[tuple[int, ...]]:
+        if len(signature) < 2:
+            return []
+        output: list[tuple[int, ...]] = []
+        for left in range(len(signature)):
+            for right in range(left + 1, len(signature)):
+                row = list(signature)
+                row[left] = 1 - row[left]
+                row[right] = 1 - row[right]
+                output.append(tuple(row))
+        return output
+
+    def _hamming_neighbor_signatures(
+        self,
+        signature: tuple[int, ...],
+        max_hamming_distance: int,
+    ) -> list[tuple[int, ...]]:
+        if not signature:
+            return []
+        max_dist = max(0, min(int(max_hamming_distance), len(signature)))
+        keys: list[tuple[int, ...]] = [signature]
+        if max_dist <= 0:
+            return keys
+
+        idxs = list(range(len(signature)))
+        for dist in range(1, max_dist + 1):
+            for combo in itertools.combinations(idxs, dist):
+                row = list(signature)
+                for idx in combo:
+                    row[idx] = 1 - row[idx]
+                keys.append(tuple(row))
+        return keys
 
     def _build_bound_cache(self, clusters: list[MemoryCluster]) -> dict[str, dict[str, object]]:
         if not self.enable_merge_upper_bound_prune or self.merge_prune_dims <= 0:
@@ -472,23 +658,77 @@ class IncrementalClusterer:
         bound = upper_dot / denom
         return max(-1.0, min(1.0, float(bound)))
 
-    def _bucket_value(self, vector: list[float], *, seed_a: int, seed_b: int) -> float:
+    def _vector_mean(self, vector: list[float]) -> float:
+        if not vector:
+            return 0.0
+        return sum(float(value) for value in vector) / float(len(vector))
+
+    def _mix64(self, value: int) -> int:
+        mask = (1 << 64) - 1
+        x = int(value) & mask
+        x ^= (x >> 30)
+        x = (x * 0xBF58476D1CE4E5B9) & mask
+        x ^= (x >> 27)
+        x = (x * 0x94D049BB133111EB) & mask
+        x ^= (x >> 31)
+        return x & mask
+
+    def _coprime_stride(self, seed: int, dim: int) -> int:
+        if dim <= 1:
+            return 1
+        stride = int(self._mix64(seed ^ 0xC2B2AE3D27D4EB4F) % (dim - 1)) + 1
+        while math.gcd(stride, dim) != 1:
+            stride += 1
+            if stride >= dim:
+                stride = 1
+        return stride
+
+    def _projection_plan(self, *, seed: int, dim: int, steps: int) -> tuple[int, int, int, bool, int]:
+        limit = max(1, min(int(steps), dim))
+        key = (int(seed) & ((1 << 64) - 1), int(dim), int(limit))
+        cached = self._projection_plan_cache.get(key)
+        if cached is not None:
+            return cached
+
+        start = int(self._mix64(seed ^ 0x9E3779B97F4A7C15) % dim)
+        stride = self._coprime_stride(seed, dim)
+        power_of_two_dim = (dim & (dim - 1)) == 0
+        dim_mask = dim - 1
+        plan = (limit, start, stride, power_of_two_dim, dim_mask)
+        self._projection_plan_cache[key] = plan
+        return plan
+
+    def _projection_score(
+        self,
+        vector: list[float],
+        *,
+        seed: int,
+        steps: int,
+        mean_value: float,
+    ) -> float:
         if not vector:
             return 0.0
         dim = len(vector)
-        idx_1 = (seed_a * 131 + seed_b * 17 + 11) % dim
-        idx_2 = (seed_a * 173 + seed_b * 37 + 29) % dim
-        idx_3 = (seed_a * 199 + seed_b * 53 + 47) % dim
-        return float(vector[idx_1]) + (0.5 * float(vector[idx_2])) + (0.25 * float(vector[idx_3]))
-
-    def _median(self, rows: list[float]) -> float:
-        if not rows:
-            return 0.0
-        ordered = sorted(float(value) for value in rows)
-        mid = len(ordered) // 2
-        if len(ordered) % 2 == 1:
-            return ordered[mid]
-        return (ordered[mid - 1] + ordered[mid]) / 2.0
+        limit, start, stride, power_of_two_dim, dim_mask = self._projection_plan(seed=seed, dim=dim, steps=steps)
+        total = 0.0
+        # Faster deterministic pseudo-random signs using xorshift64* state updates.
+        state = self._mix64(seed ^ 0xD6E8FEB86659FD93)
+        mask_64 = (1 << 64) - 1
+        idx = start
+        for _ in range(limit):
+            centered = float(vector[idx]) - mean_value
+            state ^= (state >> 12)
+            state &= mask_64
+            state ^= ((state << 25) & mask_64)
+            state ^= (state >> 27)
+            state &= mask_64
+            sign = 1.0 if (state & 1) == 0 else -1.0
+            total += centered * sign
+            if power_of_two_dim:
+                idx = (idx + stride) & dim_mask
+            else:
+                idx = (idx + stride) % dim
+        return total
 
     def _pair_allowed_in_map(
         self,
@@ -523,15 +763,14 @@ class IncrementalClusterer:
         base: MemoryCluster,
         removed_cluster_id: str,
         gate_mode: str,
-        candidate_filter_neighbors: dict[str, set[str]] | None,
-        ann_neighbors: dict[str, set[str]] | None,
+        candidate_state: _CandidateState | None,
+        ann_state: _AnnState | None,
     ) -> None:
         if gate_mode == "none":
             return
-        active_clusters = [item for item in active if item is not None]
-        active_ids = {item.cluster_id for item in active_clusters}
+        active_ids = {item.cluster_id for item in active if item is not None}
 
-        def _drop_removed(mapping: dict[str, set[str]] | None) -> None:
+        def _clean_neighbor_map(mapping: dict[str, set[str]] | None) -> None:
             if mapping is None:
                 return
             mapping.pop(removed_cluster_id, None)
@@ -539,23 +778,23 @@ class IncrementalClusterer:
                 if cid not in active_ids:
                     mapping.pop(cid, None)
                     continue
-                linked = {peer for peer in (mapping.get(cid) or set()) if peer in active_ids and peer != cid}
-                mapping[cid] = linked
+                mapping[cid].discard(removed_cluster_id)
+                mapping[cid] = {peer for peer in mapping[cid] if peer in active_ids and peer != cid}
 
-        _drop_removed(candidate_filter_neighbors)
-        _drop_removed(ann_neighbors)
-
-        if gate_mode in {"candidate_filter", "hybrid"} and candidate_filter_neighbors is not None:
-            candidate_filter_neighbors[base.cluster_id] = self._compute_candidate_neighbors_for_cluster(
-                base=base,
-                clusters=active_clusters,
+        if gate_mode in {"candidate_filter", "hybrid"} and candidate_state is not None:
+            self._candidate_state_drop_cluster(candidate_state, removed_cluster_id)
+            self._candidate_state_upsert_cluster(candidate_state, base.cluster_id, base.centroid or [])
+            _clean_neighbor_map(candidate_state.neighbors)
+            candidate_state.neighbors[base.cluster_id] = self._build_candidate_neighbors_from_state(
+                base.cluster_id,
+                candidate_state,
             )
 
-        if gate_mode in {"ann", "hybrid"} and ann_neighbors is not None:
-            ann_neighbors[base.cluster_id] = self._compute_ann_neighbors_for_cluster(
-                base=base,
-                clusters=active_clusters,
-            )
+        if gate_mode in {"ann", "hybrid"} and ann_state is not None:
+            self._ann_state_drop_cluster(ann_state, removed_cluster_id)
+            self._ann_state_upsert_cluster(ann_state, base.cluster_id, base.centroid or [])
+            _clean_neighbor_map(ann_state.neighbors)
+            ann_state.neighbors[base.cluster_id] = self._build_ann_neighbors_from_state(base.cluster_id, ann_state)
 
     def _compute_candidate_neighbors_for_cluster(
         self,
@@ -563,59 +802,75 @@ class IncrementalClusterer:
         base: MemoryCluster,
         clusters: list[MemoryCluster],
     ) -> set[str]:
-        signature = self._candidate_signature(base.centroid or [])
-        adjacent = set(self._adjacent_signatures(signature))
-        rows: list[tuple[float, str]] = []
-        all_rows: list[tuple[float, str]] = []
+        signatures_by_id: dict[str, tuple[int, ...]] = {}
+        bucket_to_ids: dict[tuple[int, ...], set[str]] = {}
+        centroids_by_id: dict[str, list[float]] = {}
         for cluster in clusters:
-            if cluster.cluster_id == base.cluster_id:
-                continue
-            score = self._approx_cosine(base.centroid or [], cluster.centroid or [])
-            all_rows.append((score, cluster.cluster_id))
-            peer_signature = self._candidate_signature(cluster.centroid or [])
-            if peer_signature == signature or peer_signature in adjacent:
-                rows.append((score, cluster.cluster_id))
-        rows.sort(key=lambda item: (-float(item[0]), item[1]))
-        all_rows.sort(key=lambda item: (-float(item[0]), item[1]))
-        explore_k = max(4, self.merge_candidate_max_neighbors)
-        ids = [cid for _, cid in rows]
-        ids.extend(cid for _, cid in all_rows[:explore_k])
-        centroid_by_id = {cluster.cluster_id: (cluster.centroid or []) for cluster in clusters}
-        base_vector = base.centroid or []
-        merged_ids = self._cap_neighbor_ids(ids, max(1, self.merge_candidate_max_neighbors * 6))
-        merged_ids.sort(
-            key=lambda cid: (
-                -self._approx_cosine(base_vector, centroid_by_id.get(cid) or []),
-                cid,
-            )
+            cid = cluster.cluster_id
+            centroid = cluster.centroid or []
+            centroids_by_id[cid] = centroid
+            signature = self._candidate_signature(centroid)
+            signatures_by_id[cid] = signature
+            bucket_to_ids.setdefault(signature, set()).add(cid)
+
+        state = _CandidateState(
+            signatures_by_id=signatures_by_id,
+            bucket_to_ids=bucket_to_ids,
+            centroids_by_id=centroids_by_id,
+            neighbors={},
         )
-        return set(self._cap_neighbor_ids(merged_ids, self.merge_candidate_max_neighbors))
+        if base.cluster_id not in state.signatures_by_id:
+            return set()
+        return self._build_candidate_neighbors_from_state(base.cluster_id, state)
+
+    def _collect_bucket_candidates(
+        self,
+        *,
+        base_cluster_id: str,
+        signature: tuple[int, ...],
+        bucket_to_ids: dict[tuple[int, ...], set[str]],
+        max_hamming_distance: int,
+    ) -> list[str]:
+        if not signature:
+            return []
+        keys = self._hamming_neighbor_signatures(signature, max_hamming_distance)
+        output: list[str] = []
+        seen: set[str] = set()
+        for key in keys:
+            for peer_id in bucket_to_ids.get(key, []):
+                if peer_id == base_cluster_id or peer_id in seen:
+                    continue
+                seen.add(peer_id)
+                output.append(peer_id)
+                if len(output) >= max(1, self.merge_candidate_max_neighbors * 8):
+                    return output
+        return output
 
     def _compute_ann_neighbors_for_cluster(
         self,
         *,
         base: MemoryCluster,
         clusters: list[MemoryCluster],
+        ann_signature_cache: dict[str, list[int]] | None = None,
     ) -> set[str]:
-        base_signatures = [self._ann_signature(base.centroid or [], table_idx) for table_idx in range(self.merge_ann_num_tables)]
-        rows: list[tuple[float, str]] = []
+        signatures_by_id = {cid: list(values) for cid, values in (ann_signature_cache or {}).items()}
+        vectors_by_id: dict[str, list[float]] = {}
         for cluster in clusters:
-            if cluster.cluster_id == base.cluster_id:
-                continue
-            matched = False
-            for table_idx in range(self.merge_ann_num_tables):
-                peer_sig = self._ann_signature(cluster.centroid or [], table_idx)
-                probes = self._ann_probe_signatures(base_signatures[table_idx])
-                if peer_sig in probes:
-                    matched = True
-                    break
-            if not matched:
-                continue
-            score = self._approx_cosine(base.centroid or [], cluster.centroid or [])
-            rows.append((score, cluster.cluster_id))
-        rows.sort(key=lambda item: (-float(item[0]), item[1]))
-        ids = [cid for _, cid in rows]
-        return set(self._cap_neighbor_ids(ids, self.merge_ann_max_neighbors))
+            cid = cluster.cluster_id
+            vectors_by_id[cid] = cluster.centroid or []
+            if cid not in signatures_by_id:
+                signatures_by_id[cid] = [
+                    self._ann_signature(cluster.centroid or [], table_idx) for table_idx in range(self.merge_ann_num_tables)
+                ]
+        state = _AnnState(
+            signatures_by_id=signatures_by_id,
+            tables=self._build_ann_tables(signatures_by_id),
+            vectors_by_id=vectors_by_id,
+            neighbors={},
+        )
+        if base.cluster_id not in state.signatures_by_id:
+            return set()
+        return self._build_ann_neighbors_from_state(base.cluster_id, state)
 
     def _is_compatible(self, fragment: MemoryFragment, cluster: MemoryCluster) -> bool:
         if not self.category_strict:

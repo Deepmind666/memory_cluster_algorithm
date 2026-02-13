@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections import Counter
 import unittest
 
+from scripts.run_candidate_filter_benchmark import synthetic_fragments as benchmark_candidate_fragments
 from src.memory_cluster.cluster import IncrementalClusterer
 from src.memory_cluster.embed import HashEmbeddingProvider
 from src.memory_cluster.models import MemoryCluster, MemoryFragment, PreferenceConfig
@@ -82,6 +84,41 @@ class TestMergeCandidateFilter(unittest.TestCase):
         for linked in (neighbors or {}).values():
             self.assertLessEqual(len(linked), 2)
 
+    def test_candidate_signature_quality_gate_on_sparse_nonnegative_vectors(self) -> None:
+        provider = HashEmbeddingProvider(dim=256)
+        clusterer = IncrementalClusterer(
+            enable_merge_candidate_filter=True,
+            merge_candidate_bucket_dims=10,
+            merge_candidate_max_neighbors=48,
+            merge_candidate_projection_steps=32,
+            merge_candidate_signature_radius=3,
+        )
+        vectors = [
+            provider.embed(
+                f"quality sample {idx} group_{idx % 24} "
+                f"mode_{('fast', 'safe', 'balanced', 'strict')[idx % 4]} token_{idx * 13}"
+            )
+            for idx in range(240)
+        ]
+        counts = Counter(clusterer._candidate_signature(vector) for vector in vectors)
+        unique_ratio = len(counts) / float(len(vectors))
+        max_bucket_ratio = max(counts.values()) / float(len(vectors))
+        self.assertGreaterEqual(unique_ratio, 0.20)
+        self.assertLessEqual(max_bucket_ratio, 0.25)
+
+    def test_candidate_filter_fallback_on_degenerate_signature(self) -> None:
+        clusterer = IncrementalClusterer(
+            enable_merge_candidate_filter=True,
+            merge_candidate_bucket_dims=10,
+            merge_candidate_max_neighbors=48,
+            merge_candidate_projection_steps=32,
+            merge_candidate_signature_radius=3,
+        )
+        clusters = [MemoryCluster(cluster_id=f"d{idx:03d}", centroid=[0.0] * 256) for idx in range(40)]
+        neighbors = clusterer._build_candidate_neighbors(clusters)
+        self.assertIsNone(neighbors)
+        self.assertGreaterEqual(clusterer.merge_candidate_filter_fallbacks, 1)
+
     def test_candidate_filter_reduces_attempts_on_sparse_case(self) -> None:
         fragments = _sparse_fragments(64)
 
@@ -91,6 +128,8 @@ class TestMergeCandidateFilter(unittest.TestCase):
                 "enable_merge_candidate_filter": True,
                 "merge_candidate_bucket_dims": 8,
                 "merge_candidate_max_neighbors": 10,
+                "merge_candidate_projection_steps": 32,
+                "merge_candidate_signature_radius": 3,
             }
         )
 
@@ -113,6 +152,7 @@ class TestMergeCandidateFilter(unittest.TestCase):
             int(baseline.metrics.get("merge_attempts") or 0),
         )
         self.assertGreater(int(filtered.metrics.get("merge_pairs_skipped_by_candidate_filter") or 0), 0)
+        self.assertEqual(int(filtered.metrics.get("merge_candidate_filter_fallbacks") or 0), 0)
         self.assertEqual(
             int(filtered.metrics.get("cluster_count") or 0),
             int(baseline.metrics.get("cluster_count") or 0),
@@ -130,13 +170,15 @@ class TestMergeCandidateFilter(unittest.TestCase):
         self.assertEqual(int(result.metrics.get("merge_pairs_skipped_by_candidate_filter") or 0), 0)
 
     def test_candidate_filter_keeps_merge_outcome_on_active_case(self) -> None:
-        fragments = _active_fragments(80)
+        fragments = _active_fragments(120)
         pref_off = PreferenceConfig.from_dict({"enable_merge_candidate_filter": False})
         pref_on = PreferenceConfig.from_dict(
             {
                 "enable_merge_candidate_filter": True,
                 "merge_candidate_bucket_dims": 10,
                 "merge_candidate_max_neighbors": 48,
+                "merge_candidate_projection_steps": 32,
+                "merge_candidate_signature_radius": 3,
             }
         )
         baseline = build_cluster_result(
@@ -164,6 +206,43 @@ class TestMergeCandidateFilter(unittest.TestCase):
             int(baseline.metrics.get("merge_attempts") or 0),
         )
         self.assertGreater(int(filtered.metrics.get("merge_pairs_skipped_by_candidate_filter") or 0), 0)
+        self.assertEqual(int(filtered.metrics.get("merge_candidate_filter_fallbacks") or 0), 0)
+
+    def test_candidate_filter_default_keeps_benchmark_active_outcome(self) -> None:
+        fragments = benchmark_candidate_fragments(240)
+        baseline_pref = PreferenceConfig.from_dict(
+            {
+                "category_strength": {"method": "strong", "evidence": "strong", "noise": "discardable"},
+                "detail_budget": {"strong": 220, "weak": 140, "discardable": 80},
+                "enable_merge_candidate_filter": False,
+            }
+        )
+        filtered_pref = PreferenceConfig.from_dict(
+            {
+                **baseline_pref.to_dict(),
+                "enable_merge_candidate_filter": True,
+            }
+        )
+        baseline = build_cluster_result(
+            fragments=fragments,
+            preference_config=baseline_pref,
+            similarity_threshold=0.82,
+            merge_threshold=0.85,
+        )
+        filtered = build_cluster_result(
+            fragments=fragments,
+            preference_config=filtered_pref,
+            similarity_threshold=0.82,
+            merge_threshold=0.85,
+        )
+        self.assertEqual(
+            int(filtered.metrics.get("cluster_count") or 0),
+            int(baseline.metrics.get("cluster_count") or 0),
+        )
+        self.assertEqual(
+            int(filtered.metrics.get("merges_applied") or 0),
+            int(baseline.metrics.get("merges_applied") or 0),
+        )
 
 
 if __name__ == "__main__":
