@@ -152,3 +152,18 @@ Next:
 1. Run one full GitHub Actions cycle to verify artifact layout and trend ingestion on hosted runner.
 2. Keep full-scale authoritative outputs in `outputs/` root and CI outputs in `outputs/ci_outputs/` only.
 3. If stable for one week, enforce a checklist item that rejects CI scripts writing benchmark JSON to `outputs/` root.
+
+## R-034 Plan Update (2026-02-13)
+Completed:
+- Added explicit CI output-path policy checker: `scripts/check_ci_output_isolation.py`.
+- Added regression unit tests: `tests/test_ci_output_isolation_unit.py`.
+- Integrated checker into both workflows:
+  - `stage2-quality-gate.yml`
+  - `stage2-nightly-trend.yml`
+- Added checker artifact output:
+  - `outputs/ci_outputs/output_isolation_check.json`
+
+Next:
+1. Observe 3-5 CI runs; if no false positives, escalate this checker to mandatory branch protection evidence.
+2. Add a checklist item in `docs/REVIEW_CHECKLIST.md` binding CI-output policy to P1 gate.
+3. Keep running full-scale guardrail/evidence rebuild from authoritative `outputs/` root only.

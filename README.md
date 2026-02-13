@@ -66,9 +66,11 @@ python -m unittest discover -s tests -p "test_*.py" -v
 - CI 阶段二门禁：`.github/workflows/stage2-quality-gate.yml`
 - 本地复用同款门禁（轻量参数）：
 ```powershell
+python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json
 python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0
 ```
 - 门禁输出：
+  - `outputs/ci_outputs/output_isolation_check.json`
   - `outputs/ci_outputs/stage2_guardrail.json`
   - `outputs/ci_reports/stage2_guardrail_report.md`
 
@@ -76,6 +78,7 @@ python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragmen
 - 定时工作流：`.github/workflows/stage2-nightly-trend.yml`
 - 本地可复现：
 ```powershell
+python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json
 python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 3 --warmup-runs 1
 python scripts/update_guardrail_trend.py --input outputs/ci_outputs/stage2_guardrail.json --output outputs/stage2_guardrail_trend.json --label local --retain 90
 ```

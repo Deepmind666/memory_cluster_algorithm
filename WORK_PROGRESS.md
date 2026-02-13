@@ -2221,3 +2221,35 @@
   - [x] nightly trend 输入路径同步
   - [x] 路径隔离单测新增并通过
   - [x] 全量测试、编译、门禁、证据包自查通过
+
+## Entry R-034-CI-Output-Policy-Guard
+- Timestamp: 2026-02-13 12:38:09 +08:00
+- Stage: 下一轮推进（CI 输出路径策略自动门禁）
+- Actions:
+  - 新增 `scripts/check_ci_output_isolation.py`：
+    - 校验 `run_ci_guardrail_bundle` 命令构建是否仅输出到 `outputs/ci_outputs/*.json`；
+    - 校验 workflow 是否引用禁用路径（`outputs/*.json` 根目录）；
+    - 输出 `outputs/ci_outputs/output_isolation_check.json`，违规时退出码 `2`。
+  - 新增 `tests/test_ci_output_isolation_unit.py`：
+    - 覆盖 bundle 命令通过/失败分支；
+    - 覆盖 workflow 文本通过/失败分支。
+  - 更新 workflow：
+    - `.github/workflows/stage2-quality-gate.yml` 增加 `Validate CI Output Isolation` 步骤并上传检查产物；
+    - `.github/workflows/stage2-nightly-trend.yml` 同步增加检查步骤与产物上传。
+  - 更新文档：
+    - `README.md` 新增本地执行路径隔离检查命令；
+    - `docs/FINAL_REPORT.md` 追加 R-034 Delta；
+    - `docs/design/next_phase_plan.md` 追加 R-034 Plan Update。
+- Verification:
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS
+  - `python -m unittest tests.test_ci_output_isolation_unit tests.test_ci_guardrail_bundle_unit -v` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`84/84`)
+  - `python -m compileall -q src scripts tests` PASS
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] 新增 CI 输出隔离策略检查脚本
+  - [x] 新增策略脚本单测并覆盖正反分支
+  - [x] 两个 CI workflow 均接入策略检查
+  - [x] 产物可追溯（`output_isolation_check.json`）
+  - [x] 全量自查通过

@@ -25,6 +25,10 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+      - name: Validate CI Output Isolation
+        run: |
+          python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json
+
       - name: Compile Check
         run: python -m compileall -q src scripts tests
 
@@ -46,6 +50,7 @@ jobs:
           name: stage2-guardrail
           path: |
             outputs/ci_outputs/stage2_guardrail.json
+            outputs/ci_outputs/output_isolation_check.json
             outputs/ci_reports/stage2_guardrail_report.md
             outputs/ci_outputs/candidate_filter_benchmark.json
             outputs/ci_outputs/candidate_profile_validation_synthetic_active.json
