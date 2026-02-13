@@ -2130,3 +2130,63 @@
   - [x] 趋势脚本可追加并输出聚合指标
   - [x] 趋势单测覆盖关键路径
   - [x] 全量测试通过（74/74）
+
+## Entry R-032-Release-Gate-Workflow
+- Timestamp: 2026-02-13 12:05:13 +08:00
+- Stage: 下一步执行（发版前强制 Stage-2 质量门禁）
+- Actions:
+  - 新增 `.github/workflows/release-with-stage2-gate.yml`（`workflow_dispatch`）:
+    - 解析目标 SHA（默认 `origin/main`）
+    - 调用 `scripts/check_stage2_gate_for_sha.py` 校验 `stage2-quality-gate` 成功记录（168h 窗口）
+    - 仅通过后才创建并推送 tag，再创建 GitHub Release
+  - 新增 `tests/test_check_stage2_gate_for_sha_unit.py`：
+    - 覆盖 ISO 时间解析、成功运行选择、过期失败、URL 编码
+  - 更新 `README.md`：补充 Release 门禁说明与本地复现实验命令
+  - 更新 `docs/FINAL_REPORT.md` 与 `docs/design/next_phase_plan.md`：追加 R-032 Delta/Plan
+- Verification:
+  - `python -m unittest tests.test_check_stage2_gate_for_sha_unit -v` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS
+  - `python -m compileall -q src scripts tests` PASS
+- Review Checklist:
+  - [x] release workflow 添加且逻辑可读
+  - [x] gate checker 单测覆盖关键分支
+  - [x] 文档与计划已同步
+  - [x] 全量测试与编译通过
+
+## Entry R-026 Opus + Workflow Spec
+- Timestamp: 2026-02-13 11:30:00 +08:00
+- Stage: R-026 Opus 评审（R-029 速度门禁 + R-030/R-030b CI 集成）+ 工作规范体系升级
+- Reviewer: Claude Opus 4.6
+- Baseline: 71/71 tests (R-030b), 74/74 tests (R-031)
+- Actions:
+  - 评审 R-029 + R-030 + R-030b 三轮合并变更
+  - 独立验证: 71/71 tests PASS, 门禁 passed=true (12 checks, warning=1), 证据包 validation.passed=true
+  - 发现 P1-1: CI bundle 覆写全量 benchmark 输出（stage2_guardrail.json/report.md 时间戳不一致）
+  - 评级: **A-**（八轮高位稳定，遗留 6/6 全部处理）
+  - 工作规范体系升级:
+    - 新建 `CLAUDE.md`：项目级强制规范（输出路径隔离、参数一致性、技术决策锁定）
+    - 重写 `AGENTS.md`：补充 Quality Gate、Output Path Rules、Locked Decisions、Known Limitations
+    - 升级 `docs/REVIEW_CHECKLIST.md` → v2.0：9 类检查项（P0~P3 分级）
+    - 更新 `.claude.md`：新增 Mandatory Self-Check、Cross-Reference、改进 Handover Essentials
+    - 新建 `docs/design/codex_execution_prompt.md`：Codex 标准执行提示词
+- Key Findings (R-026 Opus):
+  - R-025 Opus 遗留 6/6 全部修复（100% 达标率）
+  - 速度门禁: 3 项 speed warning 正确实现
+  - CI 集成: workflow + self-contained bundle 功能完整
+  - P1-1: CI bundle 输出路径需隔离（覆写全量数据风险）
+  - P2-1: 报告/JSON 时间戳不一致（P1-1 直接后果）
+- Files Changed:
+  - `docs/review/r026_r029_r030_speed_ci_integration_review.md` (NEW — 评审报告)
+  - `CLAUDE.md` (NEW — 项目级规范)
+  - `AGENTS.md` (REWRITE — Agent 规范升级)
+  - `docs/REVIEW_CHECKLIST.md` (REWRITE — v1.1 → v2.0)
+  - `.claude.md` (UPDATE — 工作流 + R-026 Opus 条目)
+  - `docs/design/codex_execution_prompt.md` (NEW — Codex 提示词)
+  - `WORK_PROGRESS.md` (追加本条目)
+- Review Checklist:
+  - [x] R-029/R-030/R-030b 全量代码审查
+  - [x] 独立测试验证 (71/71 → 74/74)
+  - [x] 门禁默认 + 严格双模式验证
+  - [x] 证据包一致性验证
+  - [x] R-026 Opus 评审报告完成
+  - [x] 工作规范体系 5 文件升级完成

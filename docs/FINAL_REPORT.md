@@ -93,3 +93,13 @@
 - Local trend output generated:
   - `outputs/stage2_guardrail_trend.json`
 - Current total tests: `74/74`.
+
+## R-032 Delta (2026-02-13)
+- Added release gate workflow:
+  - `.github/workflows/release-with-stage2-gate.yml`
+- Added gate-check unit tests:
+  - `tests/test_check_stage2_gate_for_sha_unit.py`
+- Enforced release rule:
+  - `tag/release` is allowed only after target commit SHA passes `stage2-quality-gate` within the last 168 hours.
+- Local reproducibility:
+  - `python scripts/check_stage2_gate_for_sha.py --repo <owner/repo> --sha <commit_sha> --workflow-file stage2-quality-gate.yml --max-age-hours 168 --output outputs/release_gate_check.json`

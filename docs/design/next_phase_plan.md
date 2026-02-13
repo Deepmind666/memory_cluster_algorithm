@@ -126,3 +126,14 @@ Next:
 1. Decide whether to persist trend history externally (artifact download + dashboard) for longer retention.
 2. Keep ANN frozen until `ann_active_positive_speed_target_warn` turns consistently green.
 3. If needed, tighten warning floor after 2+ weeks of stable nightly data.
+
+## R-032 Plan Update (2026-02-13)
+Completed:
+- Added release gate workflow: `.github/workflows/release-with-stage2-gate.yml`.
+- Added gate checker unit tests: `tests/test_check_stage2_gate_for_sha_unit.py`.
+- Release workflow now enforces: target SHA must have a successful `stage2-quality-gate` run within 168 hours before tag/release creation.
+
+Next:
+1. Keep `stage2-quality-gate` as required status check for `main` branch protection.
+2. Monitor release-gate failures for one week; adjust `max-age-hours` only if process latency requires it.
+3. If needed, add optional changelog artifact upload to the release workflow.

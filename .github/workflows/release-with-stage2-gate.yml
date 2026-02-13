@@ -1,0 +1,123 @@
+name: release-with-stage2-gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag name (example: v1.0.0)"
+        required: true
+        type: string
+      target_sha:
+        description: "Target commit SHA (optional, default: latest origin/main)"
+        required: false
+        type: string
+      release_title:
+        description: "Release title (optional, default: tag name)"
+        required: false
+        type: string
+      prerelease:
+        description: "Mark as prerelease"
+        required: false
+        type: boolean
+        default: false
+      generate_notes:
+        description: "Auto-generate release notes"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Resolve Target SHA
+        id: resolve_sha
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags
+          target="${{ inputs.target_sha }}"
+          if [ -z "$target" ]; then
+            target="$(git rev-parse origin/main)"
+          fi
+          git cat-file -e "${target}^{commit}"
+          echo "target_sha=${target}" >> "${GITHUB_OUTPUT}"
+          echo "resolved target sha: ${target}"
+
+      - name: Verify Stage-2 Quality Gate Passed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/check_stage2_gate_for_sha.py \
+            --repo "${{ github.repository }}" \
+            --sha "${{ steps.resolve_sha.outputs.target_sha }}" \
+            --workflow-file stage2-quality-gate.yml \
+            --max-age-hours 168 \
+            --output outputs/release_gate_check.json
+
+      - name: Upload Gate Check Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gate-check
+          path: outputs/release_gate_check.json
+
+      - name: Create and Push Tag
+        shell: bash
+        env:
+          TAG_NAME: ${{ inputs.tag_name }}
+          TARGET_SHA: ${{ steps.resolve_sha.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/${TAG_NAME}" >/dev/null; then
+            echo "tag already exists locally: ${TAG_NAME}"
+            exit 1
+          fi
+          if git ls-remote --tags origin "refs/tags/${TAG_NAME}" | grep -q .; then
+            echo "tag already exists on origin: ${TAG_NAME}"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG_NAME}" "${TARGET_SHA}" -m "Release ${TAG_NAME}"
+          git push origin "refs/tags/${TAG_NAME}"
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ inputs.tag_name }}
+          TARGET_SHA: ${{ steps.resolve_sha.outputs.target_sha }}
+          RELEASE_TITLE: ${{ inputs.release_title }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          GENERATE_NOTES: ${{ inputs.generate_notes }}
+        run: |
+          set -euo pipefail
+          title="${RELEASE_TITLE}"
+          if [ -z "${title}" ]; then
+            title="${TAG_NAME}"
+          fi
+          cmd=(gh release create "${TAG_NAME}" --target "${TARGET_SHA}" --title "${title}")
+          if [ "${PRERELEASE}" = "true" ]; then
+            cmd+=(--prerelease)
+          fi
+          if [ "${GENERATE_NOTES}" = "true" ]; then
+            cmd+=(--generate-notes)
+          else
+            cmd+=(--notes "Stage-2 quality gate check passed for ${TARGET_SHA}.")
+          fi
+          "${cmd[@]}"

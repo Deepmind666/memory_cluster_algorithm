@@ -82,6 +82,17 @@ python scripts/update_guardrail_trend.py --input outputs/stage2_guardrail.json -
 - 趋势文件：
   - `outputs/stage2_guardrail_trend.json`
 
+### Release 门禁（先过 Stage-2 再发版）
+- 发布工作流：`.github/workflows/release-with-stage2-gate.yml`（手动触发）
+- 行为：先校验目标 SHA 最近 168 小时内有成功的 `stage2-quality-gate` 运行，再允许打 tag 和创建 release。
+- 本地可复现校验脚本（需要 GitHub token）：
+```powershell
+$env:GITHUB_TOKEN="<your_token>"
+python scripts/check_stage2_gate_for_sha.py --repo Deepmind666/memory_cluster_algorithm --sha <commit_sha> --workflow-file stage2-quality-gate.yml --max-age-hours 168 --output outputs/release_gate_check.json
+```
+- 校验输出：
+  - `outputs/release_gate_check.json`
+
 ## 合规说明
 - 本仓库提供技术实现与撰写辅助，不构成法律意见。
 - 发明人应为自然人，正式申请文本请由专利代理人/律师复核。
