@@ -167,3 +167,16 @@ Next:
 1. Observe 3-5 CI runs; if no false positives, escalate this checker to mandatory branch protection evidence.
 2. Add a checklist item in `docs/REVIEW_CHECKLIST.md` binding CI-output policy to P1 gate.
 3. Keep running full-scale guardrail/evidence rebuild from authoritative `outputs/` root only.
+
+## R-035 Plan Update (2026-02-13)
+Completed:
+- Upgraded `docs/REVIEW_CHECKLIST.md` to v2.1.
+- Promoted CI output isolation checks to explicit P1 release gate terms.
+- Bound checklist to automation:
+  - `check_ci_output_isolation.py` must report `passed=true` and `violation_count=0`;
+  - both CI workflows must include `Validate CI Output Isolation`.
+
+Next:
+1. Keep collecting CI run evidence to verify zero false positives for the isolation checker.
+2. If stable, require the checker artifact in review attachments by default.
+3. Continue core algorithm track (CEG/ARB/DMG) while keeping CI/patent evidence pipeline stable.

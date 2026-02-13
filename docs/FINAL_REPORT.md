@@ -107,6 +107,16 @@
   - Enforces CI benchmark JSON must stay in `outputs/ci_outputs/*.json`.
   - Blocks accidental write-back to authoritative `outputs/*.json` root paths.
 
+## R-035 Delta (2026-02-13)
+- Upgraded review protocol:
+  - `docs/REVIEW_CHECKLIST.md` updated to `v2.1`.
+- Policy hardening in checklist:
+  - CI output isolation section is now explicit P1 mandatory gate.
+  - Required checks now include:
+    - `check_ci_output_isolation.py` → `passed=true`
+    - `violation_count=0`
+    - both workflows include `Validate CI Output Isolation` step
+
 ## R-033 Delta (2026-02-13)
 - Fixed CI output-path isolation P1:
   - `scripts/run_ci_guardrail_bundle.py` now writes all CI benchmark/guardrail JSON to `outputs/ci_outputs/*.json`.

@@ -2253,3 +2253,27 @@
   - [x] 两个 CI workflow 均接入策略检查
   - [x] 产物可追溯（`output_isolation_check.json`）
   - [x] 全量自查通过
+
+## Entry R-035-Checklist-Gate-Hardening
+- Timestamp: 2026-02-13 12:56:14 +08:00
+- Stage: 下一轮推进（评审清单门禁条款升级）
+- Actions:
+  - 升级 `docs/REVIEW_CHECKLIST.md` 至 `v2.1`：
+    - 将 CI 输出隔离明确为 P1 强制门禁；
+    - 增加自动校验绑定条款（`check_ci_output_isolation.py` 的 `passed=true` 与 `violation_count=0`）；
+    - 增加 workflow 约束条款（两条 CI workflow 必须包含 `Validate CI Output Isolation`）。
+  - 更新 `docs/design/next_phase_plan.md`：追加 R-035 Plan Update。
+  - 更新 `docs/FINAL_REPORT.md`：追加 R-035 Delta。
+  - 更新 `.claude.md`：追加 R-035 评审条目与自查结论。
+- Verification:
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`84/84`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] 清单版本升级并保持结构一致
+  - [x] P1 门禁条款具备可执行判定标准
+  - [x] 自动化检查脚本与清单条款已对齐
+  - [x] 计划/报告/进度日志同步完成
+  - [x] 全量自查通过
