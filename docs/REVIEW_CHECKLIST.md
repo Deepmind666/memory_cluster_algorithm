@@ -1,6 +1,6 @@
 ﻿# Review Checklist
 
-版本：v2.1
+版本：v2.2
 最后更新：2026-02-13
 更新人：Claude Opus 4.6（基于 R-011~R-026 八轮评审经验）
 
@@ -38,6 +38,7 @@
 - [ ] `next_phase_plan.md` 包含本轮 Plan Update
 - [ ] `WORK_PROGRESS.md` 包含本轮 Entry（时间戳 + 自查结果）
 - [ ] 新增命令已同步到 `README.md` 和 `COMMAND_CATALOG`
+- [ ] 送审附件必须包含 `docs/review/review_closure_matrix.md`
 
 ## E. 参数一致性（P1 级）
 - [ ] `cluster.py` 默认参数 = benchmark 脚本默认参数 = FINAL_REPORT 参数策略
@@ -68,3 +69,4 @@
 - [ ] 提交报告包含：已完成 / 自查结果 / 送审清单 / 下一步建议
 - [ ] `WORK_PROGRESS.md` Entry 字段完整（Timestamp/Stage/Actions/Files/Checklist）
 - [ ] 各文档 section 之间有空行分隔
+- [ ] 若评审人直接修复问题，闭环矩阵状态应标注 `closed_by_reviewer`

@@ -219,3 +219,22 @@ Next:
 1. Add CI smoke check for `append_review_closure_round.py` (dry-run/fixture mode) to prevent tooling regression.
 2. Keep review matrix as required artifact in each review handoff package.
 3. Continue algorithm-track optimization with current Stage-2 guardrail rules unchanged.
+
+## R-039 Plan Update (2026-02-13)
+Completed:
+- Added repeated-run core-claim stability benchmark:
+  - `scripts/run_core_claim_stability.py`
+  - outputs confidence-style statistics for CEG/ARB/DMG gains.
+- Added dedicated unit tests:
+  - `tests/test_core_claim_stability_unit.py` (4 tests).
+- Ran semi-real stability experiments:
+  - realistic-2000 (`runs=12`): CEG/ARB gates pass; DMG not activated in this profile.
+  - stress-2000 (`runs=4`): CEG/ARB/DMG gates all pass.
+- Upgraded review governance:
+  - `docs/REVIEW_CHECKLIST.md` v2.2 adds mandatory `review_closure_matrix.md` attachment.
+  - `docs/review/review_closure_matrix.md` v1.2 adds `closed_by_reviewer`.
+
+Next:
+1. Run stability benchmark at 5000-scale with batched execution (`runs>=3`) for stress profile to reduce runtime timeout risk.
+2. Add profile-activation coverage metric (DMG activation ratio) to avoid misreading "DMG=0" as regression under realistic profile.
+3. Integrate stability outputs into evidence-pack command catalog after one more reproducible run.

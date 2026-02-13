@@ -47,6 +47,8 @@ python scripts/run_prune_benchmark.py --output outputs/prune_benchmark.json --re
 python scripts/run_candidate_filter_benchmark.py --output outputs/candidate_filter_benchmark.json --report docs/eval/candidate_filter_benchmark_report.md
 python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md
 python scripts/run_semantic_regression.py --output outputs/semantic_regression_metrics.json --report docs/eval/semantic_regression_report.md
+python scripts/run_core_claim_stability.py --input data/examples/semi_real_memory_fragments_2000_realistic.jsonl --output outputs/core_claim_stability_semi_real_2000_realistic.json --report docs/eval/core_claim_stability_semi_real_2000_realistic_report.md --runs 12 --warmup-runs 2 --similarity-threshold 0.68 --merge-threshold 0.82
+python scripts/run_core_claim_stability.py --input data/examples/semi_real_memory_fragments_2000_stress.jsonl --output outputs/core_claim_stability_semi_real_2000_stress.json --report docs/eval/core_claim_stability_semi_real_2000_stress_report.md --runs 4 --warmup-runs 1 --similarity-threshold 1.1 --merge-threshold 0.05
 python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report docs/patent_kit/10_区别特征_技术效果_实验映射.md
 python -m unittest discover -s tests -p "test_*.py" -v
 ```

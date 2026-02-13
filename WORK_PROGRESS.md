@@ -2356,3 +2356,40 @@
   - [x] 轮次编号输入校验已加固
   - [x] 文档命令入口同步完成
   - [x] 全量自查通过
+
+## Entry R-039-Core-Claim-Stability
+- Timestamp: 2026-02-13 18:38:59 +08:00
+- Stage: 下一轮推进（核心算法证据加厚 + 评审流程治理升级）
+- Actions:
+  - 新增 `scripts/run_core_claim_stability.py`：
+    - 对 CEG/ARB/DMG 进行重复运行统计；
+    - 输出 mean/std/ci95/p05/p50/p95/positive_rate；
+    - 产出稳定性门控（`ci95 lower > 0`）。
+  - 新增 `tests/test_core_claim_stability_unit.py`（4 tests）：
+    - 常量分布、空输入、单值 CI、正收益比例。
+  - 执行半真实数据稳定性实验：
+    - realistic-2000：`runs=12`；
+    - stress-2000：`runs=4`（原 `runs=12` 超时后分批降载）。
+  - 升级评审治理：
+    - `docs/REVIEW_CHECKLIST.md` `v2.1 -> v2.2`；
+    - `docs/review/review_closure_matrix.md` `v1.1 -> v1.2`；
+    - 新增 `closed_by_reviewer` 状态并记录 R-028 reviewer-direct-fix。
+  - 文档同步：
+    - `docs/FINAL_REPORT.md` 追加 R-039 Delta；
+    - `docs/design/next_phase_plan.md` 追加 R-039 Plan Update；
+    - `README.md` 追加稳定性实验命令。
+- Verification:
+  - `python -m unittest tests.test_core_claim_stability_unit -v` PASS (`4/4`)
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`93/93`)
+  - `python -m compileall -q src scripts tests` PASS
+  - `python scripts/run_core_claim_stability.py --input data/examples/semi_real_memory_fragments_2000_realistic.jsonl --dataset-label semi_real_2000_realistic --output outputs/core_claim_stability_semi_real_2000_realistic.json --report docs/eval/core_claim_stability_semi_real_2000_realistic_report.md --runs 12 --warmup-runs 2 --similarity-threshold 0.68 --merge-threshold 0.82` PASS
+  - `python scripts/run_core_claim_stability.py --input data/examples/semi_real_memory_fragments_2000_stress.jsonl --dataset-label semi_real_2000_stress --output outputs/core_claim_stability_semi_real_2000_stress.json --report docs/eval/core_claim_stability_semi_real_2000_stress_report.md --runs 4 --warmup-runs 1 --similarity-threshold 1.1 --merge-threshold 0.05` PASS
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS (`passed=true`, `violation_count=0`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] 核心主张稳定性统计脚本落地
+  - [x] 新脚本单测覆盖关键统计分支
+  - [x] 半真实 realistic/stress 双场景已产出报告
+  - [x] 评审矩阵强制附件规则已入清单
+  - [x] 全量自查通过

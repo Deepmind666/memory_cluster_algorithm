@@ -161,3 +161,21 @@
 - Docs sync:
   - `README.md` now includes closure-matrix template command.
   - `docs/review/review_closure_matrix.md` upgraded to `v1.1`.
+
+## R-039 Delta (2026-02-13)
+- Added core-claim stability benchmark script:
+  - `scripts/run_core_claim_stability.py`
+  - metrics: mean/std/CI95/p05/p50/p95/positive_rate for CEG/ARB/DMG gains.
+- Added unit tests:
+  - `tests/test_core_claim_stability_unit.py` (4 tests).
+- Test baseline update:
+  - full suite `89/89 -> 93/93`.
+- Generated semi-real stability reports:
+  - `docs/eval/core_claim_stability_semi_real_2000_realistic_report.md` (`runs=12`)
+  - `docs/eval/core_claim_stability_semi_real_2000_stress_report.md` (`runs=4`)
+- Key results:
+  - realistic-2000: `CEG +76.1 (CI95 lower>0)` / `ARB +76.9 (CI95 lower>0)` / `DMG +0` (not triggered in this profile).
+  - stress-2000: `CEG +698.8` / `ARB +4.0` / `DMG +12373` (all CI95 lower>0).
+- Process hardening:
+  - `docs/REVIEW_CHECKLIST.md` upgraded to `v2.2` and now requires `docs/review/review_closure_matrix.md` as a mandatory review attachment.
+  - `docs/review/review_closure_matrix.md` upgraded to `v1.2`, added `closed_by_reviewer` lifecycle status.
