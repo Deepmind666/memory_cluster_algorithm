@@ -149,3 +149,15 @@
 - R-027 key findings mapped to closure records with evidence links:
   - P2-1, P2-2, P3-2 marked `closed`
   - carried P1-1 marked `closed` (R-033/R-034/R-035 chain)
+
+## R-038 Delta (2026-02-13)
+- Hardened review-closure automation:
+  - `scripts/append_review_closure_round.py` now validates round-id format and handles anchor headers with suffixes.
+  - Duplicate-round protection remains enforced (`exit=2` on duplicate section).
+- Added unit coverage:
+  - `tests/test_review_closure_matrix_unit.py` (5 tests).
+- Test baseline update:
+  - full suite `84/84 -> 89/89`.
+- Docs sync:
+  - `README.md` now includes closure-matrix template command.
+  - `docs/review/review_closure_matrix.md` upgraded to `v1.1`.

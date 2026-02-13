@@ -2326,3 +2326,33 @@
   - [x] 闭环证据路径可追溯
   - [x] 报告/计划/进度日志同步完成
   - [x] 全量自查通过
+
+## Entry R-038-Review-Matrix-Automation
+- Timestamp: 2026-02-13 14:35:26 +08:00
+- Stage: 下一轮推进（评审闭环矩阵自动化与单测补全）
+- Actions:
+  - 强化 `scripts/append_review_closure_round.py`：
+    - 新增 `validate_round_id()`，限制轮次格式为 `R-XXX` / `R-XXXX`（可带后缀）；
+    - 修复锚点定位逻辑，支持 `## Accepted Limitations (Non-blocking)` 这类带后缀标题；
+    - 保留重复轮次阻断（重复 section 直接返回错误）。
+  - 新增 `tests/test_review_closure_matrix_unit.py`（5 tests）：
+    - 插入位置正确（新轮次应在 Accepted Limitations 之前）；
+    - 重复轮次拒绝；
+    - 无锚点时回退到文末追加；
+    - 轮次格式校验通过/失败路径。
+  - 更新文档：
+    - `README.md` 增加闭环矩阵模板追加命令；
+    - `docs/review/review_closure_matrix.md` 升级到 `v1.1` 并补充模板命令。
+- Verification:
+  - `python -m unittest tests.test_review_closure_matrix_unit -v` PASS (`5/5`)
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`89/89`)
+  - `python -m compileall -q src scripts tests` PASS
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS (`passed=true`, `violation_count=0`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] 闭环矩阵脚本关键分支补齐单测
+  - [x] 锚点匹配兼容带后缀标题
+  - [x] 轮次编号输入校验已加固
+  - [x] 文档命令入口同步完成
+  - [x] 全量自查通过

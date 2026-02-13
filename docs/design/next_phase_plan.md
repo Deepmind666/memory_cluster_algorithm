@@ -203,3 +203,19 @@ Next:
 1. Keep this matrix updated per review round (`open -> closed/waived` lifecycle).
 2. Use the matrix as mandatory attachment in review submissions.
 3. Continue algorithm and experiment-track work with current guardrails unchanged.
+
+## R-038 Plan Update (2026-02-13)
+Completed:
+- Hardened closure-matrix append script:
+  - strict round-id validation (`R-XXX` / `R-XXXX` + suffix),
+  - robust anchor matching for suffixed headers.
+- Added dedicated unit tests for closure-matrix automation:
+  - `tests/test_review_closure_matrix_unit.py` (5 tests).
+- Synced documentation command entry:
+  - `README.md`,
+  - `docs/review/review_closure_matrix.md` (`v1.1`).
+
+Next:
+1. Add CI smoke check for `append_review_closure_round.py` (dry-run/fixture mode) to prevent tooling regression.
+2. Keep review matrix as required artifact in each review handoff package.
+3. Continue algorithm-track optimization with current Stage-2 guardrail rules unchanged.

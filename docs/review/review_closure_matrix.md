@@ -1,6 +1,6 @@
 # Review Closure Matrix
 
-Version: v1.0  
+Version: v1.1  
 Last Updated: 2026-02-13  
 Owner: Codex (implementation), Claude Opus (review)
 
@@ -40,3 +40,5 @@ For each new review round:
 1. append new findings rows with initial `open` status
 2. after fix, update `status/resolved in/evidence`
 3. if accepted as limitation, mark `waived` with explicit artifact reference
+4. template command:
+   - `python scripts/append_review_closure_round.py --round R-0XX --rows 3`

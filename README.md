@@ -63,11 +63,13 @@ python -m unittest discover -s tests -p "test_*.py" -v
 - 进展日志：`WORK_PROGRESS.md`
 - 质量清单：`docs/REVIEW_CHECKLIST.md`
 - 日志追加脚本：`scripts/append_progress.ps1`
+- 评审闭环矩阵模板追加脚本：`scripts/append_review_closure_round.py`
 - CI 阶段二门禁：`.github/workflows/stage2-quality-gate.yml`
 - 本地复用同款门禁（轻量参数）：
 ```powershell
 python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json
 python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0
+python scripts/append_review_closure_round.py --round R-0XX --rows 3
 ```
 - 门禁输出：
   - `outputs/ci_outputs/output_isolation_check.json`
