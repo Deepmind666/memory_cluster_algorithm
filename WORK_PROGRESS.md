@@ -1385,6 +1385,32 @@
   - [x] FINAL_REPORT 数值与最新 JSON 一致
   - [x] 专利证据文案与指标一致（无“口径大于数据”）
 
+## Entry R-021
+- Timestamp: 2026-02-11 12:30:42 +08:00
+- Stage: R-020 严格评审复核 + 专利策略重规划
+- Actions:
+  - 审阅 `docs/review/r020_stage3_bucket_value_exploratory_review.md` 并逐条技术复核。
+  - 对当前实现做签名质量快速实测（240 embedding）：
+    - candidate unique ratio = 10/240 = 4.17%
+    - candidate max bucket ratio = 197/240 = 82.08%
+    - ann(table0) unique ratio = 12/240 = 5.00%
+    - ann(table0) max bucket ratio = 107/240 = 44.58%
+  - 结论：`_bucket_value` 在 HashEmbedding 稀疏非负向量上出现严重退化，R-020 的 P0-1 判定成立。
+  - 结论：候选筛选当前通过 exploratory 全局排序保障等效，但复杂度退化至 O(k^2)；作为性能优化主张不成立。
+  - 输出下一阶段双轨计划：
+    - 工程轨：先修复签名退化，再做性能回收；
+    - 专利轨：核心主张收敛到 CEG/ARB/DMG/语义冲突抽取 4 条。
+- Files Reviewed:
+  - `docs/review/r020_stage3_bucket_value_exploratory_review.md`
+  - `src/memory_cluster/cluster.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Review Checklist:
+  - [x] 是否复现实测 P0-1：是
+  - [x] 是否判断测试严谨性缺口：是
+  - [x] 是否形成专利与工程分离决策：是
+  - [x] 是否给出可执行下一步计划：是
+
 ## Entry R-019 Opus (Opus Review)
 - Timestamp: 2026-02-11
 - Stage: Stage 3 ANN 混合候选 + 证据包 + P1-1 修复验证 全面评审
@@ -1424,3 +1450,683 @@
   - [x] ANN benchmark 数据解读
   - [x] 专利证据包 + 权利要求 18-20 审查
   - [x] 评审文档写入并含量化验证数据
+
+## Entry — R-020 Opus 深度评审
+- Timestamp: 2026-02-11 ~16:00 +08:00
+- Stage: Stage 3 `_bucket_value` 替代方案 + 探索策略 深度评审
+- Reviewer: Claude Opus 4.6
+- Baseline: commit aa478f5 (main), 51/51 tests, `_bucket_value` + `_median` + exploratory neighbors
+- Actions:
+  - 审查 cluster.py (697 行) 核心变更：_bucket_value(3 维加权) + _median(中位数) + 探索策略(全局 top-48)
+  - 运行 51/51 全量测试：通过
+  - **发现 P0-1（最高）：`_bucket_value` 签名退化** — 唯一签名仅 25/240 (10.4%)，最大桶 96/240 (40%)，与 R-011 P1-1 同类缺陷
+  - **发现 P1-1（高）：探索策略 O(k²)** — 实测 18.7% 负加速 (257ms vs 216.5ms)，桶划分不提供增量价值
+  - **确认 P1-2（高）：ANN quality_gate_pass=false** — ann_prune merges=28 vs baseline=29，ANN 签名退化同源
+  - 综合评级 B-
+  - 撰写完整评审文档：`docs/review/r020_stage3_bucket_value_exploratory_review.md`
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py` (697 行，重点 _bucket_value/_median/_build_candidate_neighbors/exploratory)
+  - `tests/test_merge_candidate_filter.py` (171 行)
+  - `tests/test_merge_ann_candidates.py` (191 行)
+  - `scripts/run_ann_hybrid_benchmark.py` (321 行)
+  - `scripts/build_patent_evidence_pack.py` (374 行)
+  - `docs/eval/ann_hybrid_benchmark_report.md`
+  - `docs/FINAL_REPORT.md`
+- Files Changed:
+  - `docs/review/r020_stage3_bucket_value_exploratory_review.md` (NEW — 完整评审含量化数据)
+  - `.claude.md` (追加 R-020 Opus 条目)
+  - `WORK_PROGRESS.md` (追加 R-020 Opus 条目)
+- Review Checklist:
+  - [x] 51/51 测试通过
+  - [x] `_bucket_value` 签名多样性实测（240 条嵌入量化验证）
+  - [x] 探索策略 O(k²) 开销量化（5 轮计时对比）
+  - [x] ANN quality_gate_pass=false 根因分析
+  - [x] benchmark 数据解读与交叉验证
+  - [x] 评审文档写入并含量化验证数据
+
+## Entry R-022
+- Timestamp: 2026-02-11 13:02:45 +08:00
+- Stage: Phase-2 收敛执行（核心主张聚焦 + 规模化实验 + 证据包重构）
+- Actions:
+  - 复跑并同步关键基准：
+    - `outputs/candidate_filter_benchmark.json` / `docs/eval/candidate_filter_benchmark_report.md`
+    - `outputs/ann_hybrid_benchmark.json` / `docs/eval/ann_hybrid_benchmark_report.md`
+    - `outputs/prune_benchmark.json` / `docs/eval/prune_benchmark_report.md`
+  - 新增核心规模化实验脚本 `scripts/run_core_scaling_benchmark.py`，完成：
+    - realistic: `outputs/core_scaling_realistic.json` / `docs/eval/core_scaling_realistic_report.md`
+    - stress: `outputs/core_scaling_stress.json` / `docs/eval/core_scaling_stress_report.md`
+  - 重写 `scripts/build_patent_evidence_pack.py`，证据包改为“核心主张 + 可选实施例”结构。
+  - 生成新版证据包：`outputs/patent_evidence_pack.json` 与 `docs/patent_kit/10_区别特征_技术效果_实验映射.md`。
+  - 重写权利要求草案为收敛版：`docs/patent_kit/06_权利要求书_草案.md`（核心权利要求集中在 1、4-11）。
+  - 重写阶段计划与总报告：
+    - `docs/design/next_phase_plan.md`
+    - `docs/FINAL_REPORT.md`
+  - 代码清理：删除 `src/memory_cluster/cluster.py` 未使用 `_median` 死代码。
+- Core Results:
+  - 单测：`53/53` PASS
+  - compileall：PASS
+  - 核心规模化（N=1000）：
+    - realistic: CEG `+2.29`, ARB `+36.1`
+    - stress: CEG `+17.0`, ARB `+55.0`, DMG block `+735`
+  - Candidate active: `merges_applied_equal=false`（21->20），`avg_speedup_ratio=-29.3320%`
+  - ANN active: `quality_gate_pass=true` 但 `avg_speedup_ratio=-677.1452%`
+- Decision:
+  - 核心专利主线：CEG/ARB/DMG/语义精度
+  - Candidate/ANN：降级为可选实施例，暂不作为核心独立主张
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py`
+  - `tests/test_merge_candidate_filter.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/run_ablation.py`
+  - `scripts/run_candidate_filter_benchmark.py`
+  - `scripts/run_ann_hybrid_benchmark.py`
+  - `scripts/run_prune_benchmark.py`
+  - `scripts/build_patent_evidence_pack.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+- Files Changed:
+  - `src/memory_cluster/cluster.py`
+  - `tests/test_merge_candidate_filter.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/run_core_scaling_benchmark.py` (new)
+  - `scripts/build_patent_evidence_pack.py` (rewritten)
+  - `docs/FINAL_REPORT.md` (rewritten)
+  - `docs/design/next_phase_plan.md` (rewritten)
+  - `docs/patent_kit/06_权利要求书_草案.md` (rewritten)
+  - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+  - `docs/eval/core_scaling_realistic_report.md` (new)
+  - `docs/eval/core_scaling_stress_report.md` (new)
+  - `docs/eval/candidate_filter_benchmark_report.md`
+  - `docs/eval/ann_hybrid_benchmark_report.md`
+  - `docs/eval/prune_benchmark_report.md`
+  - `WORK_PROGRESS.md`
+  - `.claude.md`
+- Review Checklist:
+  - [x] 新增脚本通过编译检查
+  - [x] 全量单测通过（53/53）
+  - [x] compileall 通过
+  - [x] 证据包可重建并与新权利要求结构一致
+  - [x] FINAL_REPORT 与最新 JSON 指标一致
+  - [x] 核心/可选实施例边界在文档中明确
+
+## Entry R-021 (Opus)
+- Timestamp: 2026-02-11 14:30:00 +08:00
+- Stage: R-021 Opus 深度评审（P0-1 修复 + 规模化实验 + 专利收敛）
+- Actions:
+  - 逐段审查 cluster.py 760 行全量变更（_projection_score/中心化投影/探索移除）
+  - 运行全量测试验证：53/53 PASS
+  - 编写并执行独立签名质量验证脚本（tmp_r021_verify.py）
+  - 审查核心规模化实验脚本（run_core_scaling_benchmark.py）及结果
+  - 审查权利要求书草案收敛版（20→14 条）
+  - 审查证据包重构（core_claim_ready/optional 分级）
+  - 撰写 R-021 综合评审报告
+- Key Findings:
+  - P0-1 ANN 签名显著改善：25.4% 唯一率（原 10.4%）
+  - P0-1 候选签名部分改善：17.1% 唯一率（仍低于 20% 质量门）
+  - 探索策略 O(k²) 干净移除 ✓
+  - ANN quality_gate 恢复 true（merges 29=29）✓
+  - ANN 性能灾难：-677%（48 步投影过重）
+  - 核心规模化实验为 CEG/ARB/DMG 提供首次千级正增益数据
+  - 专利收敛 20→14 方向正确
+- Rating: **B+**（较 R-020 B- 上升一级半）
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py`（全量 760 行）
+  - `tests/test_merge_candidate_filter.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/run_core_scaling_benchmark.py`
+  - `scripts/build_patent_evidence_pack.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/eval/core_scaling_realistic_report.md`
+  - `docs/eval/core_scaling_stress_report.md`
+  - `docs/eval/ann_hybrid_benchmark_report.md`
+  - `docs/patent_kit/06_权利要求书_草案.md`
+  - `docs/design/next_phase_plan.md`
+- Files Changed:
+  - `docs/review/r021_p0_fix_scaling_patent_convergence_review.md` (new)
+  - `.claude.md`
+  - `WORK_PROGRESS.md`
+- Review Checklist:
+  - [x] cluster.py 全量变更审查
+  - [x] 53/53 测试通过验证
+  - [x] 独立签名质量验证（覆盖候选 + ANN）
+  - [x] 核心规模化实验数据审查
+  - [x] 权利要求书收敛审查
+  - [x] 证据包分级审查
+  - [x] R-021 评审报告完成
+
+## Entry R-023-Phase2-Deepen
+- Timestamp: 2026-02-11 16:47:40 +08:00
+- Stage: Phase-2 深化（算法防退化 + 半真实数据证据 + 全量自查）
+- Actions:
+  - 修复 `cluster.py`：新增候选/ANN 签名退化 fallback 门，新增 fallback 指标计数。
+  - 修复 `cluster.py`：ANN 邻居刷新引入签名缓存，减少重复签名计算。
+  - 收口默认参数：Candidate `steps=32,radius=3`，ANN `tables=4,bits=10,probe=1,steps=32`。
+  - 修复并重写 `scripts/generate_semi_real_dataset.py`（乱码/可运行性/realistic+stress 双模式）。
+  - 新增并运行半真实消融：`scripts/run_core_ablation_on_dataset.py`。
+  - 重跑/更新 benchmark 与报告：candidate, ann_hybrid, core_scaling(realistic/stress), stage3_param_sweep。
+  - 更新 `docs/FINAL_REPORT.md` 与 `docs/design/next_phase_plan.md`。
+- Key Results:
+  - 测试：`55/55` PASS（`python -m unittest discover -s tests -p "test_*.py"`）。
+  - 编译：`python -m compileall -q src scripts tests` PASS。
+  - Candidate benchmark（N=240）：
+    - sparse: speedup `+20.8832%`, attempt reduction `70.8264%`。
+    - active: speedup `-105.3205%`, merges `77 -> 76`（仍有有损风险）。
+  - ANN benchmark（N=240）：
+    - `ann_prune` active `quality_gate_pass=true`, speedup `-24.8820%`。
+    - `hybrid_prune` active speedup `-144.7391%`。
+  - Core scaling realistic（N=2000）：CEG `+2.29`, ARB `+36.0`。
+  - Core scaling stress（N=1000）：CEG `+17.0`, ARB `+55.0`, DMG block `+735`。
+  - Semi-real ablation realistic（N=2000）：CEG `+76.1`, ARB `+76.9`。
+  - Semi-real ablation stress（N=2000）：CEG `+698.8`, ARB `+4.0`, DMG block `+12373`。
+  - Stage3 sweep：Candidate 可达质量门但 active 仍负加速；ANN 未找到“质量+签名+正加速”三门同过组合。
+- Decision:
+  - 核心叙事继续聚焦 CEG/ARB/DMG/语义精度。
+  - Candidate/ANN 维持“可选实施例（实验性）”，不进入核心授权论证主链。
+- Review Checklist:
+  - [x] 代码改动自查（关键路径：merge/gate/cache）
+  - [x] 退化输入防线测试（candidate/ann fallback）
+  - [x] 全量单测通过
+  - [x] 编译检查通过
+  - [x] 核心 benchmark 重跑
+  - [x] 半真实数据实验重跑
+  - [x] FINAL_REPORT 与 next_phase_plan 同步更新
+
+## Entry R-024-Patent-Evidence-Alignment
+- Timestamp: 2026-02-11 17:50:29 +08:00
+- Stage: P0 文稿收口（权利要求-证据-命令一体化对齐）
+- Actions:
+  - 重写 `scripts/build_patent_evidence_pack.py`：
+    - 接入最新证据源（含半真实数据与 stage3 参数扫描）；
+    - 输出 `command_catalog`（命令ID统一索引）；
+    - 增加自动一致性校验：claim refs / evidence files / metrics 完整性。
+  - 重建证据包：
+    - `outputs/patent_evidence_pack.json`
+    - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+    - `docs/patent_kit/11_主张_证据_命令对照.md`（新增）
+  - 更新文档：
+    - `docs/patent_kit/06_权利要求书_草案.md`（新增答复优先级）
+    - `docs/patent_kit/00_技术交底书_总览.md`（补 11 号文档索引）
+    - `docs/FINAL_REPORT.md`（补证据包命令与 11 号文档入口）
+- Key Results:
+  - 证据包 `validation.passed=true`
+  - `missing_claim_refs=[]`
+  - `missing_evidence_files=[]`
+  - `missing_metrics=[]`
+  - claim 覆盖关系：06 文档含权利要求 1-14；证据包引用 1,4-14（与策略一致）
+- Self-Check:
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (55/55)
+  - `python scripts/build_patent_evidence_pack.py ...` PASS
+- Review Checklist:
+  - [x] 权利要求映射与证据ID一一对应
+  - [x] 每个证据ID有可复现实验命令
+  - [x] 核心/可选实施例边界明确
+  - [x] 文档入口（00/10/11/FINAL_REPORT）一致
+
+## Entry R-022 Opus
+- Timestamp: 2026-02-11 18:30:00 +08:00
+- Stage: R-022 Opus 深度评审（防退化 fallback + xorshift 优化 + 半真实数据 + 参数扫描 + 测试对齐）
+- Reviewer: Claude Opus 4.6
+- Baseline: 57/57 tests, R-023/R-024 Codex changes
+- Actions:
+  - 逐段审查 cluster.py 871 行全量变更（fallback/xorshift/签名缓存/参数调整）
+  - 审查 models.py 默认参数变更
+  - 审查新增测试（fallback + benchmark 对齐质量门）
+  - 审查新增实验脚本（generate_semi_real_dataset / run_core_ablation_on_dataset / run_stage3_param_sweep）
+  - 运行全量测试验证：57/57 PASS (3.304s)
+  - 编写并执行独立签名质量验证脚本（tmp_r022_verify.py）
+  - 审查 7 份实验报告与 FINAL_REPORT 数据一致性
+  - 发现 cluster.py 与 models.py 间参数漂移问题
+- Key Findings:
+  - R-021 P1-1 修复有效：候选签名唯一率 10.8%→24.6%（steps 16→32）
+  - R-021 P1-2 修复有效：ANN 性能 -677%→-24.9%（tables 6→4, steps 48→32, 签名缓存）
+  - R-021 P1-3 修复有效：新增 2 个 benchmark 对齐测试
+  - P1-NEW-1: 参数漂移 cluster.py vs models.py（ann_num_tables 4 vs 3, ann_max_neighbors 32 vs 48）
+  - P1-NEW-2: Candidate active 仍有损（merges 77→76）
+  - 半真实数据集为证据链显著增值（CEG +76.1/+698.8, DMG +12373）
+- Rating: **A-**（较 R-021 B+ 上升半级）
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py` (871 行全量)
+  - `src/memory_cluster/models.py`
+  - `tests/test_merge_candidate_filter.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/generate_semi_real_dataset.py`
+  - `scripts/run_core_ablation_on_dataset.py`
+  - `scripts/run_stage3_param_sweep.py`
+  - `docs/FINAL_REPORT.md`
+  - 7 份实验报告（candidate/ann/core_scaling/semi_real/stage3_sweep）
+- Files Changed:
+  - `docs/review/r022_semi_real_param_sweep_robustness_review.md` (NEW)
+  - `.claude.md` (追加 R-022 Opus 条目)
+  - `WORK_PROGRESS.md` (追加 R-022 Opus 条目)
+- Review Checklist:
+  - [x] 57/57 测试通过验证
+  - [x] cluster.py 全量变更审查
+  - [x] 独立签名质量验证（候选 + ANN 双对照）
+  - [x] 实验报告数据交叉验证
+  - [x] 参数漂移发现并记录
+  - [x] R-022 Opus 评审报告完成
+
+## Entry R-025-Algorithm-Scale-Evidence
+- Timestamp: 2026-02-11 21:18:00 +08:00
+- Stage: Stage-2 深化（候选/ANN 增量缓存优化 + 5000级半真实实验 + 文档收口）
+- Actions:
+  - 重构 `src/memory_cluster/cluster.py`：
+    - 候选筛选与 ANN 邻接从“合并后全量重建”改为“增量更新”；
+    - 引入 `_projection_plan` 缓存，减少重复 stride/start 计算；
+    - 新增 state 结构（candidate/ann）并在合并后仅刷新受影响簇。
+  - 参数与默认值收口：
+    - `merge_candidate_signature_radius` 默认改为 `4`（优先等效性）；
+    - ANN 默认改为 `num_tables=3`、`max_neighbors=48`（降低负加速风险）。
+  - 基准脚本增强：
+    - `scripts/run_candidate_filter_benchmark.py` 新增签名质量指标与质量门输出；
+    - `scripts/run_ann_hybrid_benchmark.py` 新增 ANN 签名质量指标与门控输出。
+  - 测试增强：
+    - 新增 2 条 benchmark 同分布回归测试（candidate/ann 各 1）；
+    - 全量测试由 55 增至 57。
+  - 规模化实验推进：
+    - 新增数据集：`data/examples/semi_real_memory_fragments_5000_realistic.jsonl`；
+    - 新增数据集：`data/examples/semi_real_memory_fragments_5000_stress.jsonl`；
+    - 运行 `core_ablation`（5000 realistic, 5 runs）与（5000 stress, 2 runs）；
+    - realistic scaling 扩展到 `100,500,1000,2000,5000`。
+  - 证据与报告同步：
+    - 重写 `docs/FINAL_REPORT.md`（消除陈旧指标）；
+    - 重写 `docs/design/next_phase_plan.md`（进入 R-025）；
+    - 更新 `scripts/build_patent_evidence_pack.py` 对齐 5000 半真实证据；
+    - 重建 `outputs/patent_evidence_pack.json`、`docs/patent_kit/10_*.md`、`docs/patent_kit/11_*.md`。
+- Key Results:
+  - 全量单测：`57/57 PASS`
+  - compileall：PASS
+  - Candidate benchmark（N=240, radius=4）：
+    - sparse speedup `+0.173857`
+    - active speedup `-0.135157`
+    - `cluster_count_equal=true`, `merges_applied_equal=true`
+  - Stage3 参数扫描：
+    - Candidate 最优全门配置 `steps=32,radius=3,max_neighbors=48` 达到 active 正加速 `+0.018445`
+    - ANN 仍未出现“质量门+签名门+正加速”三门同过配置
+  - Semi-real 5000 realistic：CEG `+181.1`, ARB `+76.8`
+  - Semi-real 5000 stress（runs=2）：CEG `+1748.8`, DMG block `+30746`
+- Files Changed (high impact):
+  - `src/memory_cluster/cluster.py`
+  - `src/memory_cluster/models.py`
+  - `tests/test_merge_candidate_filter.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/run_candidate_filter_benchmark.py`
+  - `scripts/run_ann_hybrid_benchmark.py`
+  - `scripts/run_stage3_param_sweep.py`
+  - `scripts/build_patent_evidence_pack.py`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `outputs/core_ablation_semi_real_5000_realistic.json`
+  - `outputs/core_ablation_semi_real_5000_stress_runs2.json`
+- Review Checklist:
+  - [x] 算法改动后单测全通过
+  - [x] 编译检查通过
+  - [x] Candidate/ANN 基准重跑并记录
+  - [x] Stage3 参数扫描重跑
+  - [x] 5000级半真实实验完成并落盘
+  - [x] 证据包校验 `validation.passed=true`
+  - [x] FINAL_REPORT 与输出 JSON 指标对齐
+
+## Entry R-023 Opus
+- Timestamp: 2026-02-11 20:30:00 +08:00
+- Stage: R-023 Opus 深度评审（参数漂移修复 + Candidate 等效性恢复 + N=5000 半真实 + 签名诊断）
+- Reviewer: Claude Opus 4.6
+- Baseline: 57/57 tests, R-025 Codex changes
+- Actions:
+  - 逐段审查 cluster.py 构造器参数对齐变更
+  - 审查 models.py 参数确认
+  - 审查 benchmark 脚本签名质量诊断增强
+  - 审查测试 benchmark 同分布回归测试
+  - 运行全量测试验证：57/57 PASS (3.723s)
+  - 编写独立验证脚本 (tmp_r023_verify.py) 验证参数对齐和 Candidate 等效性
+  - 编写 ANN 深度调查脚本 (tmp_r023_ann_check.py) 探查 fragment-level vs cluster-level 签名质量差异
+  - 审查 5 组实验结果（candidate benchmark, ann benchmark, stage3 sweep, semi-real 5000 realistic/stress）
+  - 审查 FINAL_REPORT.md 数据一致性
+- Key Findings:
+  - P1-NEW-1 (参数漂移): 修复确认（10/10 字段对齐）
+  - P1-NEW-2 (Candidate 有损): 修复确认（merges 77=77, radius=4）
+  - Stage3: Candidate 首次正加速 +1.8%（radius=3 全门通过）
+  - ANN 签名诊断 vs 运行时行为不一致（fragment vs cluster centroid）
+  - N=5000 半真实: CEG +181.1/+1748.8, DMG +30746
+- Rating: **A**（项目迄今最强单轮交付）
+- Files Reviewed:
+  - `src/memory_cluster/cluster.py` (全量)
+  - `src/memory_cluster/models.py`
+  - `tests/test_merge_candidate_filter.py`
+  - `tests/test_merge_ann_candidates.py`
+  - `scripts/run_candidate_filter_benchmark.py`
+  - `scripts/run_ann_hybrid_benchmark.py`
+  - `scripts/run_stage3_param_sweep.py`
+  - `docs/FINAL_REPORT.md`
+  - 5 组实验 JSON 输出
+- Files Changed:
+  - `docs/review/r023_candidate_equiv_n5000_param_fix_review.md` (NEW)
+  - `.claude.md` (追加 R-023 Opus 条目)
+  - `WORK_PROGRESS.md` (追加 R-023 Opus 条目)
+- Review Checklist:
+  - [x] 57/57 测试通过验证
+  - [x] 参数对齐独立验证（10 字段）
+  - [x] Candidate 等效性独立验证（merges 77=77）
+  - [x] ANN fallback 行为深度调查
+  - [x] 实验数据交叉验证
+  - [x] R-023 Opus 评审报告完成
+
+## Entry R-026-ANN-Diagnostic-Alignment
+- Timestamp: 2026-02-12 11:58:16 +08:00
+- Stage: 阶段二收口（ANN 诊断口径对齐 + 文档决策固化 + 自查）
+- Actions:
+  - 修改 `scripts/run_ann_hybrid_benchmark.py`：
+    - 新增 `cluster-entry-level` 签名诊断（与运行时 ANN fallback 同口径）；
+    - 保留 `fragment-level` 诊断用于严格离线质量观察；
+    - 输出 `signature_gate_pass_cluster_runtime / signature_gate_pass_cluster_strict / signature_gate_pass_fragment_strict`；
+    - 将 `signature_gate_pass` 别名对齐为运行时门控结果，避免“报告失败但运行正常”的认知冲突。
+  - 修改 `tests/test_merge_ann_candidates.py`：
+    - 新增 `test_ann_cluster_entry_signature_quality_matches_runtime_gate`，锁定 cluster-entry 口径回归。
+  - 重跑 ANN benchmark：
+    - `outputs/ann_hybrid_benchmark.json`
+    - `docs/eval/ann_hybrid_benchmark_report.md`
+  - 更新文档：
+    - `docs/FINAL_REPORT.md`
+    - `docs/design/next_phase_plan.md`
+  - 证据包对齐：
+    - 更新 `scripts/build_patent_evidence_pack.py` 接入 Candidate 三档复验指标；
+    - 重建 `outputs/patent_evidence_pack.json` 与 10/11 号专利对照文档。
+  - 重建证据包并校验：
+    - `outputs/patent_evidence_pack.json`
+    - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+    - `docs/patent_kit/11_主张_证据_命令对照.md`
+- Key Results:
+  - 全量测试：`58/58 PASS`
+  - ANN active（ann_prune）：
+    - `quality_gate_pass=true`
+    - `avg_speedup_ratio=-0.129717`
+  - ANN 双口径签名结果：
+    - fragment-level strict gate: `false`（min unique=0.1375）
+    - cluster-entry runtime gate: `true`（min unique=0.212766, max bucket=0.510638）
+  - 证据包校验：`validation.passed=true`, `missing_*=[]`
+- Decision:
+  - Candidate 继续采用“双档策略”：默认零损失档（发布）+ 高性能实验档（需复验）。
+  - ANN 保持“可选实施例”，暂不进入核心授权主张。
+- Review Checklist:
+  - [x] ANN 诊断口径与运行门控对齐
+  - [x] 新增 ANN 口径回归测试
+  - [x] 全量测试通过（58/58）
+  - [x] 关键 benchmark 重跑并落盘
+  - [x] FINAL_REPORT 与 next_phase_plan 已同步
+  - [x] 证据包已重建并通过校验
+
+## Entry R-027-Candidate-3Scale-Validation
+- Timestamp: 2026-02-12 14:00:13 +08:00
+- Stage: P1 执行（Candidate 默认档 vs 实验档三档规模复验）
+- Actions:
+  - 新增脚本：`scripts/run_candidate_profile_validation.py`
+    - 支持 `N=240/1000/5000` 多规模批量复验；
+    - 对比默认档（radius=4）与实验档（radius=3）；
+    - 输出质量门与速度门结论。
+  - 运行三组验证：
+    - `outputs/candidate_profile_validation_synthetic_active.json`（runs=2）
+    - `outputs/candidate_profile_validation_realistic.json`（runs=2）
+    - `outputs/candidate_profile_validation_stress.json`（runs=1）
+  - 生成报告：
+    - `docs/eval/candidate_profile_validation_synthetic_active_report.md`
+    - `docs/eval/candidate_profile_validation_realistic_report.md`
+    - `docs/eval/candidate_profile_validation_stress_report.md`
+    - `docs/eval/candidate_profile_validation_summary.md`
+  - 更新文档：
+    - `docs/FINAL_REPORT.md`
+    - `docs/design/next_phase_plan.md`
+  - 清理临时排障产物（stress_n240/n1000/n5000 中间文件）
+- Key Results:
+  - synthetic_active（三档）：
+    - 默认档：质量门全通过
+    - 实验档：`N=240` 出现有损（`merges_applied 77 -> 76`）
+  - semi_real_realistic（三档）：
+    - 两档质量门均通过
+    - 实验档最差速度 `-16.9310%`（N=5000）
+  - semi_real_stress（三档, runs=1）：
+    - 两档质量门通过，但 Candidate 全程 fallback（`merge_candidate_filter_fallbacks=1`，筛选未生效）
+    - N=5000 运行成本高（单次三配置长时运行）
+  - 综合建议：
+    - 默认档继续固定 `radius=4`
+    - `radius=3` 保留为实验参数，不升为默认
+  - 证据包校验：`validation.passed=true`, `missing_*=[]`
+- Self-Check:
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (58/58)
+- Review Checklist:
+  - [x] 三档规模复验已完成并落盘
+  - [x] 关键反例（N=240 有损）已记录
+  - [x] 文档与结果文件同步
+  - [x] 回归测试与编译通过
+
+## Entry R-024 Opus
+- Timestamp: 2026-02-12 15:00:00 +08:00
+- Stage: R-024 Opus 深度评审（ANN 诊断口径对齐 + 文档决策固化 + 证据包一致性）
+- Reviewer: Claude Opus 4.6
+- Baseline: 58/58 tests, R-026 Codex changes
+- Actions:
+  - 逐行审查 `scripts/run_ann_hybrid_benchmark.py` 新增双口径诊断函数
+  - 逐行审查 `tests/test_merge_ann_candidates.py` 新增回归测试
+  - 审查 FINAL_REPORT.md 双口径解释 + ANN 可选实施例定位
+  - 审查 next_phase_plan.md R-026 计划
+  - 交叉验证 ann_hybrid_benchmark.json 全部诊断字段
+  - 交叉验证 patent_evidence_pack.json 一致性
+  - 审查专利对照文档 (10/11 号)
+  - 运行全量测试验证：58/58 PASS (6.787s)
+  - 编写独立验证脚本 (tmp_r024_verify.py) 复现双口径诊断并做 9 项 JSON 一致性检查
+- Key Findings:
+  - P2-NEW-1 (ANN 诊断不一致): 已解决（三级门控 + 别名对齐）
+  - 合并前质心数 = 94（R-023 误用合并后 18 → R-026 正确修正）
+  - Cluster-entry: min_unique=0.2128, max_bucket=0.5106, runtime gate=true
+  - JSON 一致性 9/9 OK
+  - 证据包 validation.passed=true
+  - 承继 P2: max_bucket=0.5106 仍高（ANN 负加速根因）
+- Rating: **A-**（高质量聚焦修复）
+- Files Reviewed:
+  - `scripts/run_ann_hybrid_benchmark.py` (全量)
+  - `tests/test_merge_ann_candidates.py` (全量)
+  - `outputs/ann_hybrid_benchmark.json`
+  - `docs/eval/ann_hybrid_benchmark_report.md`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+  - `outputs/patent_evidence_pack.json`
+  - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+  - `docs/patent_kit/11_主张_证据_命令对照.md`
+  - `WORK_PROGRESS.md`
+  - `.claude.md`
+- Files Changed:
+  - `docs/review/r024_ann_diagnostic_alignment_review.md` (NEW)
+  - `.claude.md` (追加 R-024 Opus 条目)
+  - `WORK_PROGRESS.md` (追加 R-024 Opus 条目)
+- Review Checklist:
+  - [x] 58/58 测试通过验证
+  - [x] 双口径诊断独立复现
+  - [x] JSON 一致性 9/9 全通过
+  - [x] 证据包交叉验证
+  - [x] 文档一致性确认
+  - [x] R-024 Opus 评审报告完成
+
+## Entry R-028-Stage2-Guardrail-And-UnitTests
+- Timestamp: 2026-02-12 20:15:35 +08:00
+- Stage: 阶段二工程稳健性推进（回归门禁自动化 + 细粒度单测补齐）
+- Actions:
+  - 新增 `scripts/run_stage2_guardrail.py`：聚合 Candidate profile/benchmark + ANN benchmark 的发布门禁检查。
+  - 新增 `tests/test_stage2_guardrail.py`：门禁脚本逻辑单测（通过、阻塞失败、strict 模式）。
+  - 新增 `tests/test_embed_eval_unit.py`：`embed.py` / `eval.py` 细粒度行为测试。
+  - 增强 `tests/test_store_reliability.py`：同批次幂等去重与 `load_latest_by_id_with_stats` 统计回传测试。
+  - 生成门禁结果与报告：
+    - `outputs/stage2_guardrail.json`
+    - `docs/eval/stage2_guardrail_report.md`
+  - 更新专利证据构建：`scripts/build_patent_evidence_pack.py`
+    - 新增 `CMD_STAGE2_GUARDRAIL`
+    - DF-06 接入 stage2 guardrail 指标与证据文件。
+  - 重建证据包：
+    - `outputs/patent_evidence_pack.json`
+    - `docs/patent_kit/10_区别特征_技术效果_实验映射.md`
+    - `docs/patent_kit/11_主张_证据_命令对照.md`
+- Key Results:
+  - `python -m unittest discover -s tests -p "test_*.py"`: `68/68 PASS`
+  - `python -m compileall -q src scripts tests`: PASS
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md`: PASS
+    - `summary.passed=true`
+    - `blocker_failures=0`
+    - `known_limitations.fast_profile_loss_at_synthetic_n240=true`（默认模式为非阻塞）
+  - 证据包校验：`validation.passed=true`, `missing_*=[]`
+- Review Checklist:
+  - [x] 回归门禁脚本可执行并输出非空指标
+  - [x] 门禁阻塞项与已知限制分级明确
+  - [x] 新增单测覆盖 embed/eval/store/guardrail
+  - [x] 全量单测通过（68/68）
+  - [x] 证据包已重建并通过校验
+
+## Entry R-025 Opus
+- Timestamp: 2026-02-12 20:45:00 +08:00
+- Stage: R-025 Opus 深度评审（Stage-2 门禁 + 细粒度测试 + 证据链升级）
+- Reviewer: Claude Opus 4.6
+- Baseline: 68/68 tests, R-028 Codex changes
+- Actions:
+  - 逐行审查 run_stage2_guardrail.py（253 行新增，9 项门禁检查）
+  - 逐行审查 test_stage2_guardrail.py（3 场景测试）
+  - 逐行审查 test_embed_eval_unit.py（5 项嵌入/评估单测）
+  - 逐行审查 test_store_reliability.py（8 项存储可靠性测试）
+  - 审查 build_patent_evidence_pack.py DF-06 + CMD 变更
+  - 审查 FINAL_REPORT.md R-028 Delta
+  - 审查 next_phase_plan.md R-028 Plan Update
+  - 交叉验证 stage2_guardrail.json + patent_evidence_pack.json
+  - 运行全量测试验证：68/68 PASS (4.101s)
+  - 独立运行门禁默认模式：passed=true, 9/9
+  - 独立运行门禁严格模式：passed=false, exit=2, blocker=fast_n240_known_loss
+- Key Findings:
+  - 门禁设计: blocker/warning 分级 + allow_known_fast_loss 可切换
+  - 测试覆盖: +10 (58→68)，embed/eval/store/guardrail 长期盲区补齐
+  - 证据链: CMD_STAGE2_GUARDRAIL 已入目录，DF-06 guardrail metrics 齐全
+  - P3-1 承继: DF-06 technical_effect "candidate 仍有有损风险" 未修正
+  - P3-4: FINAL_REPORT 测试数 58/58 滞后（实际 68/68）
+  - P3-2 新: 门禁缺速度回归告警
+- Rating: **A-**（工程价值高，文档细节仍有滞后）
+- Files Reviewed:
+  - `scripts/run_stage2_guardrail.py` (全量)
+  - `tests/test_stage2_guardrail.py` (全量)
+  - `tests/test_embed_eval_unit.py` (全量)
+  - `tests/test_store_reliability.py` (全量)
+  - `scripts/build_patent_evidence_pack.py` (全量)
+  - `outputs/stage2_guardrail.json`
+  - `docs/eval/stage2_guardrail_report.md`
+  - `outputs/patent_evidence_pack.json`
+  - `docs/FINAL_REPORT.md`
+  - `docs/design/next_phase_plan.md`
+- Files Changed:
+  - `docs/review/r025_stage2_guardrail_engineering_review.md` (NEW)
+  - `.claude.md` (追加 R-025 Opus 条目)
+  - `WORK_PROGRESS.md` (追加 R-025 Opus 条目)
+- Review Checklist:
+  - [x] 68/68 测试通过验证
+  - [x] 门禁默认 + 严格双模式独立验证
+  - [x] 证据包交叉验证
+  - [x] 文档一致性审查
+  - [x] R-025 Opus 评审报告完成
+
+## Entry R-029-Guardrail-SpeedWarning-And-Freeze
+- Timestamp: 2026-02-13 01:02:24 +08:00
+- Stage: R-025 评审意见落实（报告修正 + DF-06 口径修正 + 速度告警 + ANN 冻结决策）
+- Actions:
+  - 更新 `scripts/run_stage2_guardrail.py`：新增速度告警检查
+    - `ann_active_speed_regression_warn`
+    - `ann_active_positive_speed_target_warn`
+    - `candidate_active_speed_regression_warn`
+  - 新增参数：
+    - `--candidate-active-speed-warn-floor`
+    - `--ann-active-speed-warn-floor`
+  - 扩展门禁输出 `known_limitations`：
+    - `ann_active_not_positive_speedup`
+    - `candidate_active_speed`
+    - `ann_active_speed`
+  - 更新 `tests/test_stage2_guardrail.py`：补 `candidate_benchmark=None` 路径。
+  - 更新 `scripts/build_patent_evidence_pack.py`：
+    - DF-06 technical_effect 修正为“默认 Candidate 零损失 + 实验档风险披露”；
+    - 接入新增 guardrail 速度指标。
+  - 文档修正：
+    - `docs/FINAL_REPORT.md` 测试数修正至 `69/69`；
+    - 追加 R-029 冻结决策说明（ANN 仍无正加速，保持可选实施例）；
+    - `docs/design/next_phase_plan.md` 追加 R-029 计划更新。
+  - 清理临时文件：删除 `tmp_r022_verify.py`、`tmp_r023_ann_check.py`、`tmp_r023_verify.py`、`tmp_r024_verify.py`。
+- Key Results:
+  - `python -m unittest discover -s tests -p "test_*.py"`: `69/69 PASS`
+  - `python -m compileall -q src scripts tests`: PASS
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md`: PASS
+    - `summary.passed=true`
+    - `blocker_failures=0`
+    - `warning_failures=1`（ANN active 速度未转正）
+  - `python scripts/build_patent_evidence_pack.py ...`: PASS
+    - `validation.passed=true`, `missing_*=[]`
+- Review Checklist:
+  - [x] FINAL_REPORT 测试数已修正
+  - [x] DF-06 技术效果口径已修正
+  - [x] 门禁已增加速度告警
+  - [x] ANN 冻结决策已文档化
+  - [x] `candidate_benchmark=None` 测试已补
+  - [x] 全量测试与编译通过
+
+## Entry R-030-CI-Stage2-Quality-Gate
+- Timestamp: 2026-02-13 10:48:56 +08:00
+- Stage: 下一步执行（Stage-2 门禁接入 CI）
+- Actions:
+  - 新增 CI 编排脚本：`scripts/run_ci_guardrail_bundle.py`
+    - 轻量流水线：生成 semi-real 数据（realistic/stress）→ Candidate benchmark → Candidate profile validation（三组）→ ANN benchmark → Stage-2 guardrail。
+    - 默认参数：`dataset-size=240`, `benchmark-fragment-count=120`, `runs=1`, `warmup-runs=0`。
+    - 输出报告统一落盘到 `outputs/ci_reports/`，避免覆盖仓库内已跟踪评估文档。
+  - 新增 GitHub Actions 工作流：`.github/workflows/stage2-quality-gate.yml`
+    - 触发：`pull_request`, `push(main)`, `workflow_dispatch`
+    - 门禁：`compileall + unittest + run_ci_guardrail_bundle`
+    - 产物上传：`stage2_guardrail.json` 与相关 benchmark JSON/报告。
+  - 更新 README：新增 Stage-2 CI 门禁本地复现命令与输出说明。
+- Verification:
+  - `python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0` PASS
+    - `outputs/stage2_guardrail.json`: `passed=true`, `blocker_failures=0`, `warning_failures=1`
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`69/69`)
+  - `python -m compileall -q src scripts tests` PASS
+- Review Checklist:
+  - [x] CI workflow 文件创建并可读
+  - [x] 本地复现命令可跑通
+  - [x] blocker 门禁可阻断（由 guardrail 退出码控制）
+  - [x] 报告输出不污染已跟踪评估报告
+  - [x] 全量单测通过
+
+## Entry R-030b-CI-Bundle-Decoupling-And-Test
+- Timestamp: 2026-02-13 10:51:24 +08:00
+- Stage: CI 门禁脚本稳健化（去外部依赖 + 单测补齐）
+- Actions:
+  - 更新 `scripts/run_ci_guardrail_bundle.py`：内置 semi-real 数据集生成，不再依赖 `scripts/generate_semi_real_dataset.py` 外部脚本。
+  - CI 报告输出路径统一为 `outputs/ci_reports/`。
+  - 新增 `tests/test_ci_guardrail_bundle_unit.py`：验证数据集生成 JSONL 结构与最小样本约束。
+  - 更新 `docs/FINAL_REPORT.md` 当前测试数到 `71/71`。
+- Verification:
+  - `python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`71/71`)
+  - `python -m compileall -q src scripts tests` PASS
+- Review Checklist:
+  - [x] CI bundle 脚本不依赖未纳管外部脚本
+  - [x] 新增单测覆盖 CI bundle 关键逻辑
+  - [x] 全量测试通过（71/71）
+
+## Entry R-031-Nightly-Trend-Pipeline
+- Timestamp: 2026-02-13 11:44:50 +08:00
+- Stage: 下一步执行（夜间趋势追踪与告警稳定性）
+- Actions:
+  - 新增 `scripts/update_guardrail_trend.py`：将 `stage2_guardrail.json` 追加到趋势文件，计算 pass/blocker/warning 比率与速度均值。
+  - 新增 `tests/test_guardrail_trend_unit.py`：趋势记录抽取、保留窗口、roundtrip 测试。
+  - 新增 `.github/workflows/stage2-nightly-trend.yml`：定时/手动运行 nightly profile（runs=3,warmup=1）并产出 `stage2_guardrail_trend.json`。
+  - 更新 `README.md`：新增 Stage-2 Nightly 趋势说明与本地复现命令。
+- Verification:
+  - `python -m unittest tests.test_guardrail_trend_unit tests.test_ci_guardrail_bundle_unit` PASS (5 tests)
+  - `python scripts/update_guardrail_trend.py --input outputs/stage2_guardrail.json --output outputs/stage2_guardrail_trend.json --label local --retain 90` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`74/74`)
+  - `python -m compileall -q src scripts tests` PASS
+- Review Checklist:
+  - [x] 夜间趋势 workflow 创建并可读
+  - [x] 趋势脚本可追加并输出聚合指标
+  - [x] 趋势单测覆盖关键路径
+  - [x] 全量测试通过（74/74）

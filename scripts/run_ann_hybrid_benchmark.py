@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import sys
 import time
@@ -12,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.memory_cluster.cluster import IncrementalClusterer
+from src.memory_cluster.embed import HashEmbeddingProvider
 from src.memory_cluster.models import MemoryFragment, PreferenceConfig
 from src.memory_cluster.pipeline import build_cluster_result
 
@@ -129,6 +132,72 @@ def compare_to_baseline(baseline: dict[str, Any], candidate: dict[str, Any]) -> 
     }
 
 
+def _ann_signature_stats_for_vectors(
+    *,
+    vectors: list[list[float]],
+    ann_num_tables: int,
+    ann_bits_per_table: int,
+    ann_projection_steps: int,
+) -> dict[str, float]:
+    clusterer = IncrementalClusterer(
+        enable_merge_ann_candidates=True,
+        merge_ann_num_tables=max(1, int(ann_num_tables)),
+        merge_ann_bits_per_table=max(1, int(ann_bits_per_table)),
+        merge_ann_projection_steps=max(1, int(ann_projection_steps)),
+    )
+    unique_ratios: list[float] = []
+    max_bucket_ratios: list[float] = []
+    weight_spread = 0
+    for table_idx in range(max(1, int(ann_num_tables))):
+        signatures = [clusterer._ann_signature(vec, table_idx) for vec in vectors]
+        counts = Counter(signatures)
+        total = max(1, len(signatures))
+        unique_ratios.append(len(counts) / float(total))
+        max_bucket_ratios.append(max(counts.values()) / float(total))
+        if table_idx == 0:
+            weights = [bin(value).count("1") for value in signatures]
+            weight_spread = int(max(weights) - min(weights)) if weights else 0
+    return {
+        "min_table_unique_ratio": round(min(unique_ratios), 6) if unique_ratios else 0.0,
+        "max_table_bucket_ratio": round(max(max_bucket_ratios), 6) if max_bucket_ratios else 1.0,
+        "table0_weight_spread": int(weight_spread),
+        "vector_count": int(len(vectors)),
+    }
+
+
+def _build_merge_entry_centroids(
+    *,
+    fragments: list[MemoryFragment],
+    similarity_threshold: float,
+) -> list[list[float]]:
+    provider = HashEmbeddingProvider(dim=256)
+    assigner = IncrementalClusterer(
+        similarity_threshold=float(similarity_threshold),
+        merge_threshold=1.0,
+    )
+    clusters: list[Any] = []
+    for item in sorted(fragments, key=lambda row: row.timestamp):
+        assigner.assign(fragment=item, embedding=provider.embed(item.content), clusters=clusters)
+    return [list(cluster.centroid or []) for cluster in clusters]
+
+
+def _ann_signature_stats(
+    *,
+    fragments: list[MemoryFragment],
+    ann_num_tables: int,
+    ann_bits_per_table: int,
+    ann_projection_steps: int,
+) -> dict[str, float]:
+    provider = HashEmbeddingProvider(dim=256)
+    vectors = [provider.embed(item.content) for item in fragments]
+    return _ann_signature_stats_for_vectors(
+        vectors=vectors,
+        ann_num_tables=ann_num_tables,
+        ann_bits_per_table=ann_bits_per_table,
+        ann_projection_steps=ann_projection_steps,
+    )
+
+
 def build_variant_preferences(args: argparse.Namespace) -> dict[str, PreferenceConfig]:
     base = {
         "category_strength": {"method": "strong", "evidence": "strong", "noise": "discardable"},
@@ -142,6 +211,8 @@ def build_variant_preferences(args: argparse.Namespace) -> dict[str, PreferenceC
         "enable_merge_candidate_filter": True,
         "merge_candidate_bucket_dims": max(1, int(args.bucket_dims)),
         "merge_candidate_max_neighbors": max(1, int(args.candidate_max_neighbors)),
+        "merge_candidate_projection_steps": max(1, int(args.candidate_projection_steps)),
+        "merge_candidate_signature_radius": max(0, int(args.candidate_signature_radius)),
     }
     ann = {
         "enable_merge_ann_candidates": True,
@@ -150,6 +221,7 @@ def build_variant_preferences(args: argparse.Namespace) -> dict[str, PreferenceC
         "merge_ann_probe_radius": max(0, min(1, int(args.ann_probe_radius))),
         "merge_ann_max_neighbors": max(1, int(args.ann_max_neighbors)),
         "merge_ann_score_dims": max(1, int(args.ann_score_dims)),
+        "merge_ann_projection_steps": max(1, int(args.ann_projection_steps)),
     }
     return {
         "baseline_exact": PreferenceConfig.from_dict({**base}),
@@ -198,6 +270,8 @@ def run_scenario(
 
 
 def write_report(path: Path, payload: dict[str, Any]) -> None:
+    runtime_sig = payload.get("signature_cluster_entry") or {}
+    fragment_sig = payload.get("signature_fragment") or {}
     lines = [
         "# ANN Hybrid Benchmark",
         "",
@@ -206,11 +280,24 @@ def write_report(path: Path, payload: dict[str, Any]) -> None:
         f"- prune_dims: {payload.get('prune_dims')}",
         f"- candidate_bucket_dims: {payload.get('bucket_dims')}",
         f"- candidate_max_neighbors: {payload.get('candidate_max_neighbors')}",
+        f"- candidate_projection_steps: {payload.get('candidate_projection_steps')}",
+        f"- candidate_signature_radius: {payload.get('candidate_signature_radius')}",
         f"- ann_num_tables: {payload.get('ann_num_tables')}",
         f"- ann_bits_per_table: {payload.get('ann_bits_per_table')}",
         f"- ann_probe_radius: {payload.get('ann_probe_radius')}",
         f"- ann_max_neighbors: {payload.get('ann_max_neighbors')}",
         f"- ann_score_dims: {payload.get('ann_score_dims')}",
+        f"- ann_projection_steps: {payload.get('ann_projection_steps')}",
+        f"- ann_cluster_entry_count: {runtime_sig.get('vector_count')}",
+        f"- ann_signature_runtime_min_table_unique_ratio: {runtime_sig.get('min_table_unique_ratio')}",
+        f"- ann_signature_runtime_max_table_bucket_ratio: {runtime_sig.get('max_table_bucket_ratio')}",
+        f"- ann_signature_runtime_table0_weight_spread: {runtime_sig.get('table0_weight_spread')}",
+        f"- ann_signature_fragment_min_table_unique_ratio: {fragment_sig.get('min_table_unique_ratio')}",
+        f"- ann_signature_fragment_max_table_bucket_ratio: {fragment_sig.get('max_table_bucket_ratio')}",
+        f"- ann_signature_fragment_table0_weight_spread: {fragment_sig.get('table0_weight_spread')}",
+        f"- ann_signature_gate_pass_cluster_runtime: {payload.get('signature_gate_pass_cluster_runtime')}",
+        f"- ann_signature_gate_pass_cluster_strict: {payload.get('signature_gate_pass_cluster_strict')}",
+        f"- ann_signature_gate_pass_fragment_strict: {payload.get('signature_gate_pass_fragment_strict')}",
         "",
     ]
     for scenario in payload.get("scenarios") or []:
@@ -256,11 +343,14 @@ def main() -> int:
     parser.add_argument("--prune-dims", type=int, default=48)
     parser.add_argument("--bucket-dims", type=int, default=10)
     parser.add_argument("--candidate-max-neighbors", type=int, default=48)
-    parser.add_argument("--ann-num-tables", type=int, default=6)
+    parser.add_argument("--candidate-projection-steps", type=int, default=32)
+    parser.add_argument("--candidate-signature-radius", type=int, default=4)
+    parser.add_argument("--ann-num-tables", type=int, default=3)
     parser.add_argument("--ann-bits-per-table", type=int, default=10)
     parser.add_argument("--ann-probe-radius", type=int, default=1)
     parser.add_argument("--ann-max-neighbors", type=int, default=48)
     parser.add_argument("--ann-score-dims", type=int, default=48)
+    parser.add_argument("--ann-projection-steps", type=int, default=32)
     parser.add_argument("--sparse-similarity-threshold", type=float, default=2.0)
     parser.add_argument("--sparse-merge-threshold", type=float, default=0.95)
     parser.add_argument("--active-similarity-threshold", type=float, default=0.82)
@@ -290,6 +380,53 @@ def main() -> int:
         merge_threshold=args.active_merge_threshold,
     )
 
+    signature_stats = _ann_signature_stats(
+        fragments=active_fragments,
+        ann_num_tables=max(1, int(args.ann_num_tables)),
+        ann_bits_per_table=max(1, int(args.ann_bits_per_table)),
+        ann_projection_steps=max(1, int(args.ann_projection_steps)),
+    )
+    cluster_entry_centroids = _build_merge_entry_centroids(
+        fragments=active_fragments,
+        similarity_threshold=float(args.active_similarity_threshold),
+    )
+    cluster_entry_signature_stats = _ann_signature_stats_for_vectors(
+        vectors=cluster_entry_centroids,
+        ann_num_tables=max(1, int(args.ann_num_tables)),
+        ann_bits_per_table=max(1, int(args.ann_bits_per_table)),
+        ann_projection_steps=max(1, int(args.ann_projection_steps)),
+    )
+    signature_gate_pass_fragment_strict = (
+        float(signature_stats.get("min_table_unique_ratio") or 0.0) >= 0.25
+        and float(signature_stats.get("max_table_bucket_ratio") or 1.0) <= 0.25
+        and int(signature_stats.get("table0_weight_spread") or 0) > 2
+    )
+    signature_gate_pass_cluster_strict = (
+        float(cluster_entry_signature_stats.get("min_table_unique_ratio") or 0.0) >= 0.25
+        and float(cluster_entry_signature_stats.get("max_table_bucket_ratio") or 1.0) <= 0.25
+        and int(cluster_entry_signature_stats.get("table0_weight_spread") or 0) > 2
+    )
+    signature_gate_pass_cluster_runtime = (
+        float(cluster_entry_signature_stats.get("min_table_unique_ratio") or 0.0) >= 0.18
+        and float(cluster_entry_signature_stats.get("max_table_bucket_ratio") or 1.0) <= 0.90
+    )
+    active_comparisons = active.get("comparisons_vs_baseline") or {}
+    for variant_name in ("ann_prune", "hybrid_prune"):
+        summary = active_comparisons.get(variant_name)
+        if summary is None:
+            continue
+        summary["signature_gate_pass"] = bool(signature_gate_pass_cluster_runtime)
+        summary["signature_gate_pass_cluster_runtime"] = bool(signature_gate_pass_cluster_runtime)
+        summary["signature_gate_pass_cluster_strict"] = bool(signature_gate_pass_cluster_strict)
+        summary["signature_gate_pass_fragment_strict"] = bool(signature_gate_pass_fragment_strict)
+        summary["min_table_unique_ratio"] = cluster_entry_signature_stats.get("min_table_unique_ratio")
+        summary["max_table_bucket_ratio"] = cluster_entry_signature_stats.get("max_table_bucket_ratio")
+        summary["table0_weight_spread"] = cluster_entry_signature_stats.get("table0_weight_spread")
+        summary["fragment_min_table_unique_ratio"] = signature_stats.get("min_table_unique_ratio")
+        summary["fragment_max_table_bucket_ratio"] = signature_stats.get("max_table_bucket_ratio")
+        summary["fragment_table0_weight_spread"] = signature_stats.get("table0_weight_spread")
+        summary["cluster_entry_count"] = cluster_entry_signature_stats.get("vector_count")
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "dataset": "synthetic_ann_hybrid_case",
@@ -297,11 +434,21 @@ def main() -> int:
         "prune_dims": int(args.prune_dims),
         "bucket_dims": int(args.bucket_dims),
         "candidate_max_neighbors": int(args.candidate_max_neighbors),
+        "candidate_projection_steps": int(args.candidate_projection_steps),
+        "candidate_signature_radius": int(args.candidate_signature_radius),
         "ann_num_tables": int(args.ann_num_tables),
         "ann_bits_per_table": int(args.ann_bits_per_table),
         "ann_probe_radius": int(args.ann_probe_radius),
         "ann_max_neighbors": int(args.ann_max_neighbors),
         "ann_score_dims": int(args.ann_score_dims),
+        "ann_projection_steps": int(args.ann_projection_steps),
+        "signature": cluster_entry_signature_stats,
+        "signature_fragment": signature_stats,
+        "signature_cluster_entry": cluster_entry_signature_stats,
+        "signature_gate_pass": bool(signature_gate_pass_cluster_runtime),
+        "signature_gate_pass_cluster_runtime": bool(signature_gate_pass_cluster_runtime),
+        "signature_gate_pass_cluster_strict": bool(signature_gate_pass_cluster_strict),
+        "signature_gate_pass_fragment_strict": bool(signature_gate_pass_fragment_strict),
         "scenarios": [sparse, active],
     }
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import sys
 import time
@@ -12,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.memory_cluster.cluster import IncrementalClusterer
+from src.memory_cluster.embed import HashEmbeddingProvider
 from src.memory_cluster.models import MemoryFragment, PreferenceConfig
 from src.memory_cluster.pipeline import build_cluster_result
 
@@ -111,6 +114,31 @@ def summarize_pair(baseline: dict[str, Any], optimized: dict[str, Any]) -> dict[
     }
 
 
+def _candidate_signature_stats(
+    *,
+    fragments: list[MemoryFragment],
+    bucket_dims: int,
+    max_neighbors: int,
+    projection_steps: int,
+    signature_radius: int,
+) -> dict[str, float]:
+    provider = HashEmbeddingProvider(dim=256)
+    clusterer = IncrementalClusterer(
+        enable_merge_candidate_filter=True,
+        merge_candidate_bucket_dims=max(1, int(bucket_dims)),
+        merge_candidate_max_neighbors=max(1, int(max_neighbors)),
+        merge_candidate_projection_steps=max(1, int(projection_steps)),
+        merge_candidate_signature_radius=max(0, int(signature_radius)),
+    )
+    vectors = [provider.embed(item.content) for item in fragments]
+    counts = Counter(clusterer._candidate_signature(vec) for vec in vectors)
+    total = max(1, len(vectors))
+    return {
+        "signature_unique_ratio": round(len(counts) / float(total), 6),
+        "signature_max_bucket_ratio": round(max(counts.values()) / float(total), 6),
+    }
+
+
 def run_scenario(
     *,
     name: str,
@@ -157,6 +185,8 @@ def main() -> int:
     parser.add_argument("--warmup-runs", type=int, default=2)
     parser.add_argument("--bucket-dims", type=int, default=10)
     parser.add_argument("--max-neighbors", type=int, default=48)
+    parser.add_argument("--candidate-projection-steps", type=int, default=32)
+    parser.add_argument("--candidate-signature-radius", type=int, default=4)
     parser.add_argument("--sparse-similarity-threshold", type=float, default=2.0)
     parser.add_argument("--sparse-merge-threshold", type=float, default=0.95)
     parser.add_argument("--active-similarity-threshold", type=float, default=0.82)
@@ -177,6 +207,8 @@ def main() -> int:
             "enable_merge_candidate_filter": True,
             "merge_candidate_bucket_dims": max(1, int(args.bucket_dims)),
             "merge_candidate_max_neighbors": max(1, int(args.max_neighbors)),
+            "merge_candidate_projection_steps": max(1, int(args.candidate_projection_steps)),
+            "merge_candidate_signature_radius": max(0, int(args.candidate_signature_radius)),
         }
     )
 
@@ -201,12 +233,36 @@ def main() -> int:
         merge_threshold=args.active_merge_threshold,
     )
 
+    signature_stats = _candidate_signature_stats(
+        fragments=fragments,
+        bucket_dims=max(1, int(args.bucket_dims)),
+        max_neighbors=max(1, int(args.max_neighbors)),
+        projection_steps=max(1, int(args.candidate_projection_steps)),
+        signature_radius=max(0, int(args.candidate_signature_radius)),
+    )
+    signature_gate_pass = (float(signature_stats.get("signature_unique_ratio") or 0.0) >= 0.20) and (
+        float(signature_stats.get("signature_max_bucket_ratio") or 1.0) <= 0.25
+    )
+    active_quality_gate_pass = bool((active.get("summary") or {}).get("cluster_count_equal")) and bool(
+        (active.get("summary") or {}).get("merges_applied_equal")
+    )
+    for scenario in (sparse, active):
+        summary = scenario.get("summary") or {}
+        summary.update(signature_stats)
+        summary["signature_gate_pass"] = bool(signature_gate_pass)
+        summary["quality_gate_pass"] = bool(active_quality_gate_pass) if scenario.get("name") == "merge_active_case" else True
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "dataset": "synthetic_candidate_filter_case",
         "fragment_count": len(fragments),
         "bucket_dims": max(1, int(args.bucket_dims)),
         "max_neighbors": max(1, int(args.max_neighbors)),
+        "candidate_projection_steps": max(1, int(args.candidate_projection_steps)),
+        "candidate_signature_radius": max(0, int(args.candidate_signature_radius)),
+        "signature": signature_stats,
+        "signature_gate_pass": bool(signature_gate_pass),
+        "active_quality_gate_pass": bool(active_quality_gate_pass),
         "scenarios": [sparse, active],
     }
 
@@ -222,6 +278,12 @@ def main() -> int:
             f"- fragment_count: {payload.get('fragment_count')}",
             f"- bucket_dims: {payload.get('bucket_dims')}",
             f"- max_neighbors: {payload.get('max_neighbors')}",
+            f"- candidate_projection_steps: {payload.get('candidate_projection_steps')}",
+            f"- candidate_signature_radius: {payload.get('candidate_signature_radius')}",
+            f"- signature_unique_ratio: {(payload.get('signature') or {}).get('signature_unique_ratio')}",
+            f"- signature_max_bucket_ratio: {(payload.get('signature') or {}).get('signature_max_bucket_ratio')}",
+            f"- signature_gate_pass: {payload.get('signature_gate_pass')}",
+            f"- active_quality_gate_pass: {payload.get('active_quality_gate_pass')}",
             "",
         ]
         for scenario in payload.get("scenarios") or []:
@@ -248,6 +310,10 @@ def main() -> int:
                     f"- attempt_reduction_ratio: {summary.get('attempt_reduction_ratio')}",
                     f"- cluster_count_equal: {summary.get('cluster_count_equal')}",
                     f"- merges_applied_equal: {summary.get('merges_applied_equal')}",
+                    f"- signature_unique_ratio: {summary.get('signature_unique_ratio')}",
+                    f"- signature_max_bucket_ratio: {summary.get('signature_max_bucket_ratio')}",
+                    f"- signature_gate_pass: {summary.get('signature_gate_pass')}",
+                    f"- quality_gate_pass: {summary.get('quality_gate_pass')}",
                     f"- merge_activity_present: {summary.get('merge_activity_present')}",
                     "",
                 ]

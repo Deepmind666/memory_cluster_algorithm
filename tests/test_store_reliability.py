@@ -60,6 +60,24 @@ class TestStoreReliability(unittest.TestCase):
             self.assertEqual(len(latest), 1)
             self.assertEqual(latest[0].version, 2)
 
+    def test_idempotent_append_dedups_duplicates_within_same_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            store_path = Path(tmp_dir) / "store.jsonl"
+            store = FragmentStore(store_path)
+            fragment = MemoryFragment(
+                id="i2b",
+                agent_id="planner_agent",
+                timestamp="2026-02-10T10:00:00+00:00",
+                content="same batch duplicate",
+                type="draft",
+                version=3,
+            )
+
+            stats = store.append_fragments_with_stats([fragment, fragment], idempotent=True)
+            self.assertEqual(stats.inserted, 1)
+            self.assertEqual(stats.skipped_existing, 1)
+            self.assertEqual(len(store.load_fragments()), 1)
+
     def test_load_fragments_skips_invalid_lines_when_not_strict(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             store_path = Path(tmp_dir) / "store.jsonl"
@@ -106,6 +124,24 @@ class TestStoreReliability(unittest.TestCase):
 
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0].id, "bom1")
+
+    def test_load_latest_by_id_with_stats_propagates_read_stats(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            store_path = Path(tmp_dir) / "store.jsonl"
+            lines = [
+                '{"id":"v1","agent_id":"a","timestamp":"2026-02-10T10:00:00+00:00","content":"x","type":"draft","version":1}',
+                '{"id":"v1","agent_id":"a","timestamp":"2026-02-10T10:01:00+00:00","content":"x2","type":"draft","version":2}',
+                "{bad-json-line",
+            ]
+            store_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+            store = FragmentStore(store_path)
+            latest, stats = store.load_latest_by_id_with_stats(strict=False)
+            self.assertEqual(len(latest), 1)
+            self.assertEqual(latest[0].version, 2)
+            self.assertEqual(stats.total_lines, 3)
+            self.assertEqual(stats.parsed_lines, 2)
+            self.assertEqual(stats.decode_errors, 1)
 
 
 if __name__ == "__main__":

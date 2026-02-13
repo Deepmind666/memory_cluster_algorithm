@@ -1,0 +1,61 @@
+name: stage2-nightly-trend
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  nightly-trend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Compile Check
+        run: python -m compileall -q src scripts tests
+
+      - name: Unit Tests
+        run: python -m unittest discover -s tests -p "test_*.py"
+
+      - name: Run CI Guardrail Bundle (nightly profile)
+        run: |
+          python scripts/run_ci_guardrail_bundle.py \
+            --dataset-size 240 \
+            --benchmark-fragment-count 120 \
+            --runs 3 \
+            --warmup-runs 1
+
+      - name: Update Guardrail Trend
+        run: |
+          python scripts/update_guardrail_trend.py \
+            --input outputs/stage2_guardrail.json \
+            --output outputs/stage2_guardrail_trend.json \
+            --label nightly \
+            --retain 90
+
+      - name: Upload Nightly Trend Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage2-nightly-trend
+          path: |
+            outputs/stage2_guardrail.json
+            outputs/stage2_guardrail_trend.json
+            outputs/ci_reports/stage2_guardrail_report.md
+            outputs/ci_reports/candidate_filter_benchmark_report.md
+            outputs/ci_reports/candidate_profile_validation_synthetic_active_report.md
+            outputs/ci_reports/candidate_profile_validation_realistic_report.md
+            outputs/ci_reports/candidate_profile_validation_stress_report.md
+            outputs/ci_reports/ann_hybrid_benchmark_report.md

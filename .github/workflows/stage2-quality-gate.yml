@@ -1,0 +1,59 @@
+name: stage2-quality-gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  guardrail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Compile Check
+        run: python -m compileall -q src scripts tests
+
+      - name: Unit Tests
+        run: python -m unittest discover -s tests -p "test_*.py"
+
+      - name: Run Stage-2 Guardrail Bundle
+        run: |
+          python scripts/run_ci_guardrail_bundle.py \
+            --dataset-size 240 \
+            --benchmark-fragment-count 120 \
+            --runs 1 \
+            --warmup-runs 0
+
+      - name: Upload Guardrail Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage2-guardrail
+          path: |
+            outputs/stage2_guardrail.json
+            outputs/ci_reports/stage2_guardrail_report.md
+            outputs/candidate_filter_benchmark.json
+            outputs/candidate_profile_validation_synthetic_active.json
+            outputs/candidate_profile_validation_realistic.json
+            outputs/candidate_profile_validation_stress.json
+            outputs/ann_hybrid_benchmark.json
+            outputs/ci_reports/candidate_filter_benchmark_report.md
+            outputs/ci_reports/candidate_profile_validation_synthetic_active_report.md
+            outputs/ci_reports/candidate_profile_validation_realistic_report.md
+            outputs/ci_reports/candidate_profile_validation_stress_report.md
+            outputs/ci_reports/ann_hybrid_benchmark_report.md
