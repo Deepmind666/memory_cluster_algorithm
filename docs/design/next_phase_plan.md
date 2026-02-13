@@ -192,3 +192,14 @@ Next:
 1. Keep R-delta sections append-only and chronological to avoid review ambiguity.
 2. Keep each `WORK_PROGRESS` verification block with explicit full-test count.
 3. Continue algorithm-track improvements with current CI/patent evidence guardrails unchanged.
+
+## R-037 Plan Update (2026-02-13)
+Completed:
+- Added `docs/review/review_closure_matrix.md` as a structured review-closure board.
+- Mapped R-027 key findings to closure statuses and evidence references.
+- Added accepted-limitation entries to separate warnings from real defects.
+
+Next:
+1. Keep this matrix updated per review round (`open -> closed/waived` lifecycle).
+2. Use the matrix as mandatory attachment in review submissions.
+3. Continue algorithm and experiment-track work with current guardrails unchanged.

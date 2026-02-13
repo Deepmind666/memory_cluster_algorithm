@@ -142,3 +142,10 @@
   - Reordered R-delta sections to chronological order (`R-031 -> R-032 -> R-033 -> R-034 -> R-035`).
   - Corrected R-031 historical test-count snapshot from `84/84` to `74/74`.
   - Aligned R-032 progress record with explicit full-test count (`79/79`) in `WORK_PROGRESS.md`.
+
+## R-037 Delta (2026-02-13)
+- Added review closure matrix:
+  - `docs/review/review_closure_matrix.md`
+- R-027 key findings mapped to closure records with evidence links:
+  - P2-1, P2-2, P3-2 marked `closed`
+  - carried P1-1 marked `closed` (R-033/R-034/R-035 chain)

@@ -2301,3 +2301,28 @@
   - [x] R-032 verification 全量测试计数补齐
   - [x] 报告/计划/进度日志同步完成
   - [x] 全量自查通过
+
+## Entry R-037-Review-Closure-Matrix
+- Timestamp: 2026-02-13 13:21:39 +08:00
+- Stage: 下一轮推进（评审闭环矩阵落地）
+- Actions:
+  - 新增 `docs/review/review_closure_matrix.md`：
+    - 建立 finding 级闭环看板（ID/级别/状态/修复轮次/证据）；
+    - 首批映射 R-027 关键结论（P2-1/P2-2/P3-2）；
+    - 纳入承继问题 R-026 P1-1 的闭环链（R-033~R-035）；
+    - 单列 `Accepted Limitations`（ANN active speed / candidate fast profile）。
+  - 更新 `docs/FINAL_REPORT.md`：追加 R-037 Delta（闭环矩阵接入）。
+  - 更新 `docs/design/next_phase_plan.md`：追加 R-037 Plan Update。
+  - 更新 `.claude.md`：追加 R-037 条目与自查结果。
+- Verification:
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`84/84`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] 闭环矩阵文档创建并可独立阅读
+  - [x] R-027 finding 映射完整且状态明确
+  - [x] 闭环证据路径可追溯
+  - [x] 报告/计划/进度日志同步完成
+  - [x] 全量自查通过
