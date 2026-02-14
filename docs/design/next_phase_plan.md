@@ -342,3 +342,17 @@ Next:
 1. Send `docs/patent_kit/00-15` package to patent agent.
 2. Wait for first formal CNIPA-format draft from agent.
 3. Perform technical-fact-only proofreading on agent draft (no new R&D/testing expansion).
+
+## R-046 Plan Update (2026-02-14)
+Completed:
+- Produced CNIPA-style formal draft set in `docs/patent_kit/16-19`:
+  - formal specification draft,
+  - formal claims draft,
+  - formal abstract draft,
+  - figure drawing textual script.
+- Expanded index file `00_技术交底书_总览.md` to include 16-19 for one-click handover.
+
+Next:
+1. Send `docs/patent_kit/00-19` full package to patent agent.
+2. Ask agent to return first CNIPA submission draft based on 16-19 as primary text and 00-15 as supporting evidence.
+3. Perform technical consistency check only (title, terms, step chain, claim support), then finalize for CPC filing.

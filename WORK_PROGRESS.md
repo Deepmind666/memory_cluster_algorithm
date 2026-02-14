@@ -2568,3 +2568,25 @@
   - [x] 证据索引与提交流程已结构化
   - [x] 代理人沟通邮件模板可直接复用
   - [x] 总览文件已同步新增交接材料
+
+## Entry R-046-CNIPA-Formal-Drafting-Package
+- Timestamp: 2026-02-14 21:00:22 +08:00
+- Stage: 材料撰写阶段（CNIPA 正式文本草稿 + 附图文字稿）
+- Actions:
+  - 新增 CNIPA 正式文稿草案：
+    - `docs/patent_kit/16_CNIPA_说明书_正式稿.md`
+    - `docs/patent_kit/17_CNIPA_权利要求书_正式稿.md`
+    - `docs/patent_kit/18_CNIPA_说明书摘要_正式稿.md`
+    - `docs/patent_kit/19_CNIPA_附图文字描述稿.md`
+  - 更新交底总览索引：
+    - `docs/patent_kit/00_技术交底书_总览.md` 增加 16-19 文档入口。
+- Verification:
+  - 文档一致性自查：PASS（发明名称、核心术语、步骤链路在 16/17/18/19 间一致）
+  - 附图可绘制性自查：PASS（图1-图6均给出组件、连线、图注和标号）
+  - 说明：按用户指令，本轮不执行测试/评审流程。
+- Review Checklist:
+  - [x] 说明书符合 CNIPA 常用章节结构
+  - [x] 权利要求书形成独立项+从属项正式表达
+  - [x] 摘要已形成可提交文本并给出摘要附图建议
+  - [x] 附图文字描述稿可直接交给制图员绘图
+  - [x] 交底总览已同步新增正式稿入口

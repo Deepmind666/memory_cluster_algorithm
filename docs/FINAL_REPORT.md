@@ -284,3 +284,18 @@
   - `15_代理人沟通邮件模板.md`
 - Updated handover index:
   - `00_技术交底书_总览.md` now includes items 12-15.
+
+## R-046 Delta (2026-02-14)
+- Converted patent package into CNIPA-style formal draft documents:
+  - `16_CNIPA_说明书_正式稿.md`
+  - `17_CNIPA_权利要求书_正式稿.md`
+  - `18_CNIPA_说明书摘要_正式稿.md`
+  - `19_CNIPA_附图文字描述稿.md`
+- Added drawing-ready textual script for figures:
+  - figure list (`图1-图6`),
+  - element IDs,
+  - connection logic,
+  - caption suggestions,
+  - abstract-figure recommendation.
+- Updated index:
+  - `00_技术交底书_总览.md` now includes items 16-19.
