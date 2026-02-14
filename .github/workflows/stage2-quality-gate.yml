@@ -50,6 +50,7 @@ jobs:
           name: stage2-guardrail
           path: |
             outputs/ci_outputs/stage2_guardrail.json
+            outputs/ci_outputs/ci_guardrail_bundle_summary.json
             outputs/ci_outputs/output_isolation_check.json
             outputs/ci_reports/stage2_guardrail_report.md
             outputs/ci_outputs/candidate_filter_benchmark.json

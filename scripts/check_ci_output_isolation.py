@@ -31,11 +31,13 @@ _FORBIDDEN_ROOT_JSON_PATHS = {
     "outputs/stage2_guardrail.json",
     "outputs/core_claim_stability_ci_realistic.json",
     "outputs/core_claim_stability_ci_stress.json",
+    "outputs/ci_guardrail_bundle_summary.json",
 }
 
 _REQUIRED_WORKFLOW_PATHS: dict[str, set[str]] = {
     ".github/workflows/stage2-quality-gate.yml": {
         "outputs/ci_outputs/stage2_guardrail.json",
+        "outputs/ci_outputs/ci_guardrail_bundle_summary.json",
         "outputs/ci_outputs/candidate_filter_benchmark.json",
         "outputs/ci_outputs/candidate_profile_validation_synthetic_active.json",
         "outputs/ci_outputs/candidate_profile_validation_realistic.json",
@@ -44,6 +46,7 @@ _REQUIRED_WORKFLOW_PATHS: dict[str, set[str]] = {
     },
     ".github/workflows/stage2-nightly-trend.yml": {
         "outputs/ci_outputs/stage2_guardrail.json",
+        "outputs/ci_outputs/ci_guardrail_bundle_summary.json",
     },
 }
 

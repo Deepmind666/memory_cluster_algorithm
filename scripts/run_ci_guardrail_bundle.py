@@ -8,7 +8,7 @@ import random
 import subprocess
 import sys
 import time
-from typing import Sequence
+from typing import Any, Sequence
 
 
 def _run(cmd: Sequence[str]) -> None:
@@ -21,6 +21,55 @@ def _run(cmd: Sequence[str]) -> None:
 
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _load_trend_history(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        payload = _read_json(path)
+    except Exception:
+        return []
+    history = payload.get("history")
+    if not isinstance(history, list):
+        return []
+    return [row for row in history if isinstance(row, dict)]
+
+
+def _ann_not_positive_streak(*, history: list[dict[str, Any]], current_not_positive: bool) -> int:
+    if not current_not_positive:
+        return 0
+    streak = 1
+    for row in reversed(history):
+        if bool(row.get("ann_active_not_positive_speedup")):
+            streak += 1
+        else:
+            break
+    return streak
+
+
+def evaluate_strict_ann_positive_speed_policy(
+    *,
+    guardrail_payload: dict[str, Any],
+    trend_history: list[dict[str, Any]],
+    threshold: int,
+) -> dict[str, Any]:
+    known = dict(guardrail_payload.get("known_limitations") or {})
+    current_not_positive = bool(known.get("ann_active_not_positive_speedup"))
+    streak = _ann_not_positive_streak(history=trend_history, current_not_positive=current_not_positive)
+    strict_threshold = max(0, int(threshold))
+    strict_triggered = strict_threshold > 0 and streak >= strict_threshold
+    return {
+        "strict_ann_positive_speed_streak_threshold": strict_threshold,
+        "ann_active_not_positive_current": current_not_positive,
+        "ann_not_positive_streak": streak,
+        "strict_triggered": strict_triggered,
+    }
 
 
 def _write_semi_real_dataset(path: Path, *, fragment_count: int, seed: int, profile: str) -> None:
@@ -243,6 +292,22 @@ def main() -> int:
     parser.add_argument("--benchmark-fragment-count", type=int, default=120)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--warmup-runs", type=int, default=0)
+    parser.add_argument(
+        "--strict-ann-positive-speed-streak",
+        type=int,
+        default=0,
+        help="Optional strict mode. If >0, fail bundle when ann_active_not_positive_speedup streak reaches threshold.",
+    )
+    parser.add_argument(
+        "--trend-input",
+        default="outputs/stage2_guardrail_trend.json",
+        help="Trend history file used to calculate ann_active_not_positive_speedup streak.",
+    )
+    parser.add_argument(
+        "--summary-output",
+        default="outputs/ci_outputs/ci_guardrail_bundle_summary.json",
+        help="Output JSON summary path for CI bundle run.",
+    )
     args = parser.parse_args()
 
     py = str(args.python)
@@ -301,23 +366,32 @@ def main() -> int:
 
     stage2_guardrail_path = ci_outputs / "stage2_guardrail.json"
     result = _read_json(stage2_guardrail_path)
+    trend_history = _load_trend_history(Path(args.trend_input))
+    strict_policy = evaluate_strict_ann_positive_speed_policy(
+        guardrail_payload=result,
+        trend_history=trend_history,
+        threshold=int(args.strict_ann_positive_speed_streak),
+    )
     passed = bool((result.get("summary") or {}).get("passed"))
     blockers = int((result.get("summary") or {}).get("blocker_failures") or 0)
     warnings = int((result.get("summary") or {}).get("warning_failures") or 0)
-    print(
-        json.dumps(
-            {
-                "status": "ok" if passed else "failed",
-                "stage2_guardrail_passed": passed,
-                "blocker_failures": blockers,
-                "warning_failures": warnings,
-                "guardrail_file": stage2_guardrail_path.as_posix(),
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
-    return 0 if passed else 2
+    strict_triggered = bool(strict_policy.get("strict_triggered"))
+    final_passed = passed and not strict_triggered
+    summary = {
+        "status": "ok" if final_passed else "failed",
+        "stage2_guardrail_passed": passed,
+        "blocker_failures": blockers,
+        "warning_failures": warnings,
+        "guardrail_file": stage2_guardrail_path.as_posix(),
+        "trend_input": Path(args.trend_input).as_posix(),
+        "strict_policy": strict_policy,
+        "strict_failure_reason": (
+            "ann_active_not_positive_speedup_streak_reached_threshold" if strict_triggered else ""
+        ),
+    }
+    _write_json(Path(args.summary_output), summary)
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    return 0 if final_passed else 2
 
 
 if __name__ == "__main__":

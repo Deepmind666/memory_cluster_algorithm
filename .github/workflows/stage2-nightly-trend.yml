@@ -56,6 +56,7 @@ jobs:
           name: stage2-nightly-trend
           path: |
             outputs/ci_outputs/stage2_guardrail.json
+            outputs/ci_outputs/ci_guardrail_bundle_summary.json
             outputs/ci_outputs/output_isolation_check.json
             outputs/ci_outputs/core_claim_stability_ci_realistic.json
             outputs/ci_outputs/core_claim_stability_ci_stress.json

@@ -7,6 +7,8 @@ from pathlib import Path
 
 from scripts.run_ci_guardrail_bundle import (
     _build_bundle_commands,
+    _ann_not_positive_streak,
+    evaluate_strict_ann_positive_speed_policy,
     _write_core_stability_fixture,
     _write_semi_real_dataset,
 )
@@ -105,6 +107,45 @@ class TestCiGuardrailBundleUnit(unittest.TestCase):
             self.assertEqual(payload.get("runs"), 3)
             self.assertEqual(payload.get("runs_completed"), 3)
             self.assertEqual(payload.get("is_complete"), True)
+
+    def test_ann_not_positive_streak_counts_from_history_tail(self) -> None:
+        history = [
+            {"ann_active_not_positive_speedup": True},
+            {"ann_active_not_positive_speedup": False},
+            {"ann_active_not_positive_speedup": True},
+            {"ann_active_not_positive_speedup": True},
+        ]
+        streak = _ann_not_positive_streak(history=history, current_not_positive=True)
+        self.assertEqual(streak, 3)
+
+    def test_ann_not_positive_streak_zero_when_current_is_positive(self) -> None:
+        history = [{"ann_active_not_positive_speedup": True}, {"ann_active_not_positive_speedup": True}]
+        streak = _ann_not_positive_streak(history=history, current_not_positive=False)
+        self.assertEqual(streak, 0)
+
+    def test_strict_policy_triggers_when_streak_reaches_threshold(self) -> None:
+        guardrail = {"known_limitations": {"ann_active_not_positive_speedup": True}}
+        history = [
+            {"ann_active_not_positive_speedup": True},
+            {"ann_active_not_positive_speedup": True},
+        ]
+        policy = evaluate_strict_ann_positive_speed_policy(
+            guardrail_payload=guardrail,
+            trend_history=history,
+            threshold=3,
+        )
+        self.assertEqual(int(policy.get("ann_not_positive_streak") or 0), 3)
+        self.assertTrue(bool(policy.get("strict_triggered")))
+
+    def test_strict_policy_off_when_threshold_zero(self) -> None:
+        guardrail = {"known_limitations": {"ann_active_not_positive_speedup": True}}
+        history = [{"ann_active_not_positive_speedup": True}] * 10
+        policy = evaluate_strict_ann_positive_speed_policy(
+            guardrail_payload=guardrail,
+            trend_history=history,
+            threshold=0,
+        )
+        self.assertFalse(bool(policy.get("strict_triggered")))
 
 
 if __name__ == "__main__":

@@ -2213,7 +2213,7 @@
   - `python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0` PASS
   - `python -m unittest discover -s tests -p "test_*.py"` PASS (`80/80`)
   - `python -m compileall -q src scripts tests` PASS
-  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md --core-stability outputs/core_claim_stability_semi_real_5000_realistic.json --core-stability outputs/core_claim_stability_semi_real_5000_stress.json` PASS (`passed=true`, `check_count=14`, `blocker_failures=0`)
   - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
 - Review Checklist:
   - [x] CI JSON 输出与权威输出隔离完成
@@ -2515,3 +2515,34 @@
   - [x] workflow artifact 可追踪 core-stability fixture 输入
   - [x] 相关单测覆盖已补齐
   - [x] 全量自查通过
+
+## Entry R-044-CI-Bundle-StrictPolicy-Isolation
+- Timestamp: 2026-02-14 18:25:05 +08:00
+- Stage: 下一轮推进（CI bundle 严格策略可选化 + 输出隔离增强）
+- Actions:
+  - 升级 `scripts/run_ci_guardrail_bundle.py`：
+    - 新增可选严格参数：`--strict-ann-positive-speed-streak`、`--trend-input`、`--summary-output`；
+    - 新增趋势读取与连续告警计数逻辑，支持对 `ann_active_not_positive_speedup` 连续轮次做可选阻断；
+    - 新增汇总产物：`outputs/ci_outputs/ci_guardrail_bundle_summary.json`。
+  - 升级 `scripts/check_ci_output_isolation.py`：
+    - 新增 root-path 禁止项：`outputs/ci_guardrail_bundle_summary.json`；
+    - 将 `outputs/ci_outputs/ci_guardrail_bundle_summary.json` 加入两个 workflow 的必需路径校验。
+  - workflow 同步：
+    - `.github/workflows/stage2-quality-gate.yml` 与 `.github/workflows/stage2-nightly-trend.yml` 新增上传 `outputs/ci_outputs/ci_guardrail_bundle_summary.json`。
+  - 测试扩展：
+    - `tests/test_ci_guardrail_bundle_unit.py` 新增严格策略 streak/trigger 单测；
+    - `tests/test_ci_output_isolation_unit.py` 新增 bundle summary 必需路径缺失检测单测。
+- Verification:
+  - `python -m unittest tests.test_ci_guardrail_bundle_unit tests.test_ci_output_isolation_unit -v` PASS (`15/15`)
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS (`passed=true`, `violation_count=0`)
+  - `python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0` PASS（`stage2_guardrail_passed=true`, `strict_triggered=false`）
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`108/108`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md` PASS (`passed=true`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] CI bundle 严格策略为可选，不改变默认门禁语义
+  - [x] 新增 summary JSON 已纳入 CI 输出隔离与 workflow 必需路径
+  - [x] 相关单测与全量测试通过
+  - [x] Stage-2 与证据包主链路验证通过
+  - [x] 文档与计划条目已同步

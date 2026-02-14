@@ -306,3 +306,24 @@ Next:
 1. Optionally promote a strict mode in CI bundle to fail when ANN active positive-speed warning persists for a configurable streak.
 2. Keep core-stability fixture contract minimal and stable (`dataset/runs/runs_completed/is_complete`) to avoid CI flakiness.
 3. Continue algorithm-track improvements while keeping stage2 gate deterministic on hosted runners.
+
+## R-044 Plan Update (2026-02-14)
+Completed:
+- Implemented optional strict streak policy in CI bundle:
+  - `run_ci_guardrail_bundle.py` now calculates ANN active non-positive speed streak from trend history.
+  - strict mode can be enabled via `--strict-ann-positive-speed-streak N`.
+  - default remains non-blocking (`N=0`) to avoid changing current gate semantics.
+- Added CI bundle summary artifact:
+  - `outputs/ci_outputs/ci_guardrail_bundle_summary.json`
+  - includes stage2 status, strict policy snapshot, and strict-failure reason.
+- Hardened output isolation governance:
+  - `check_ci_output_isolation.py` now enforces summary JSON cannot be written to `outputs/` root.
+  - required workflow paths now include the new summary artifact.
+- Extended tests:
+  - strict-policy unit tests in `tests/test_ci_guardrail_bundle_unit.py`
+  - workflow-required-path regression tests in `tests/test_ci_output_isolation_unit.py`
+
+Next:
+1. Keep strict streak threshold disabled in default CI, and only enable it intentionally in dedicated branches/environments after trend stabilization.
+2. If enabled later, set threshold based on historical trend variance to avoid false blockers from one-off runner noise.
+3. Continue core algorithm/experiment track while maintaining CI guardrail determinism and isolation guarantees.
