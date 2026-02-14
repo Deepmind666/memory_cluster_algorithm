@@ -4,7 +4,7 @@
 
 ## 1. 褰撳墠鐘舵€?- 鏍稿績绠楁硶涓荤嚎绋冲畾锛歚CEG + ARB + DMG + 鍐茬獊璇箟绮惧害`銆?- Candidate 宸插畬鎴愨€滈粯璁ら浂鎹熷け妗ｂ€濅笌鈥滈珮鎬ц兘瀹為獙妗ｂ€濆垎灞傜鐞嗐€?- ANN 宸插畬鎴愯瘖鏂彛寰勫榻愶細鎶ュ憡鍚屾椂缁欏嚭 `fragment-level` 涓?`cluster-entry-level`锛屼笉鍐嶆贩娣嗏€滄姤鍛婂け璐ヤ絾杩愯姝ｅ父鈥濄€?- 涓撳埄璇佹嵁鍖呭彲鑷姩閲嶅缓骞舵牎楠岋細`outputs/patent_evidence_pack.json`銆?
 ## 2. 鑷煡缁撴灉
-1. `python -m unittest discover -s tests -p "test_*.py"`锛歚98/98` 閫氳繃
+1. `python -m unittest discover -s tests -p "test_*.py"`锛歚100/100` 閫氳繃
 2. `python scripts/run_ann_hybrid_benchmark.py --output outputs/ann_hybrid_benchmark.json --report docs/eval/ann_hybrid_benchmark_report.md --fragment-count 240 --runs 10 --warmup-runs 2`锛氶€氳繃  
 3. 鍏抽敭杈撳嚭宸叉洿鏂帮細`outputs/ann_hybrid_benchmark.json`銆乣docs/eval/ann_hybrid_benchmark_report.md`
 
@@ -218,3 +218,17 @@
   - full suite `93/93 -> 98/98`.
 - Evidence command sync:
   - `CMD_STAGE2_GUARDRAIL` now includes two core-stability inputs for reproducible completeness checks in evidence rebuild.
+
+## R-042 Delta (2026-02-14)
+- Added CLI end-to-end smoke tests for stage-2 core-stability guard:
+  - `tests/test_stage2_guardrail_cli_smoke.py`
+  - verifies:
+    - pass path: `--core-stability` profiles complete -> exit `0`
+    - fail path: incomplete profile -> exit `2` + blocker failure recorded
+- Process hardening update:
+  - `docs/REVIEW_CHECKLIST.md` upgraded to `v2.3`
+  - Stage-2 checklist now explicitly requires:
+    - `--core-stability` inputs when stability evidence is cited
+    - `core_stability.incomplete_count=0`
+- Test baseline update:
+  - full suite `98/98 -> 100/100`.

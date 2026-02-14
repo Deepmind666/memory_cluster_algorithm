@@ -275,3 +275,17 @@ Next:
 1. Add one CLI integration test for `run_stage2_guardrail.py` that verifies `--core-stability` path parsing and output fields end-to-end.
 2. Add optional weekly stability rerun checklist item in stage2/nightly process docs (avoid stale `is_complete` evidence).
 3. Keep ANN frozen as optional implementation unless active profile positive speedup becomes stable across repeated runs.
+
+## R-042 Plan Update (2026-02-14)
+Completed:
+- Added CLI integration smoke tests for `run_stage2_guardrail.py`:
+  - new file `tests/test_stage2_guardrail_cli_smoke.py`
+  - covers both pass path (all core-stability profiles complete) and blocker path (incomplete profile causes exit code `2`).
+- Strengthened process checklist for stale-evidence prevention:
+  - `docs/REVIEW_CHECKLIST.md` upgraded to `v2.3`.
+  - added Stage-2 item requiring `--core-stability` inputs and `core_stability.incomplete_count=0` whenever core stability evidence is referenced.
+
+Next:
+1. Add a CI smoke invocation for `run_stage2_guardrail.py --core-stability ...` on lightweight fixture outputs.
+2. Keep weekly/nightly rerun discipline for stability artifacts to avoid stale `is_complete` snapshots.
+3. Continue ANN optional-path freeze policy until active speedup is stably positive.

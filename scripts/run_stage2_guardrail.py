@@ -277,7 +277,7 @@ def _write_report(path: Path, payload: dict[str, Any]) -> None:
     lines.extend(
         [
             "",
-        "## Checks",
+            "## Checks",
         ]
     )
     for item in payload.get("checks") or []:

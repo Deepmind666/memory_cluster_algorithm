@@ -1,7 +1,7 @@
 ﻿# Review Checklist
 
-版本：v2.2
-最后更新：2026-02-13
+版本：v2.3
+最后更新：2026-02-14
 更新人：Claude Opus 4.6（基于 R-011~R-026 八轮评审经验）
 
 ## 使用方法
@@ -24,6 +24,7 @@
 - [ ] `blocker_failures=0`
 - [ ] 门禁报告 (.md) 与 JSON 输出来自同一次运行（时间戳一致）
 - [ ] 新增检查项有对应的 mock 测试路径
+- [ ] 若引用 core-stability 证据，门禁命令需带 `--core-stability` 输入且 `core_stability.incomplete_count=0`
 
 ## C. 证据包完整性（P1 级）
 - [ ] `build_patent_evidence_pack.py` 输出 `validation.passed=true`

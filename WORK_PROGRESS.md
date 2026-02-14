@@ -2454,3 +2454,31 @@
   - [x] 证据命令目录与报告命令一致
   - [x] 外部评审摘要补齐运行成本与分批理由
   - [x] 全量自查通过
+
+## Entry R-042-Guardrail-CLI-Integration
+- Timestamp: 2026-02-14 08:18:00 +08:00
+- Stage: 下一轮推进（Stage-2 core-stability 门禁 CLI 集成覆盖）
+- Actions:
+  - 新增 `tests/test_stage2_guardrail_cli_smoke.py`：
+    - 覆盖 `run_stage2_guardrail.py --core-stability` 的端到端 CLI 行为；
+    - 覆盖完整性通过路径（exit=0）与不完整阻断路径（exit=2）。
+  - 优化 `scripts/run_stage2_guardrail.py` 报告生成格式细节（`## Checks` 段落对齐）。
+  - 升级 `docs/REVIEW_CHECKLIST.md` 至 `v2.3`：
+    - Stage-2 新增硬性项：若引用 core-stability 证据，必须传 `--core-stability` 且 `core_stability.incomplete_count=0`。
+  - 文档同步：
+    - `docs/FINAL_REPORT.md` 追加 R-042 Delta；
+    - `docs/design/next_phase_plan.md` 追加 R-042 Plan Update；
+    - 新增评审摘要 `docs/review/r042_stage2_guardrail_cli_integration_summary.md`。
+- Verification:
+  - `python -m unittest tests.test_stage2_guardrail tests.test_stage2_guardrail_cli_smoke tests.test_core_claim_stability_resume_smoke -v` PASS (`9/9`)
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`100/100`)
+  - `python -m compileall -q src scripts tests` PASS
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS (`passed=true`, `violation_count=0`)
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md --core-stability outputs/core_claim_stability_semi_real_5000_realistic.json --core-stability outputs/core_claim_stability_semi_real_5000_stress.json` PASS (`check_count=14`, `blocker_failures=0`)
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS (`validation.passed=true`)
+- Review Checklist:
+  - [x] Stage-2 core-stability 门禁具备 CLI 集成测试覆盖
+  - [x] 阻断路径（incomplete profile）具备可复现断言
+  - [x] 清单规范已绑定 core-stability 完整性条件
+  - [x] 证据包与报告重新构建并通过
+  - [x] 全量自查通过
