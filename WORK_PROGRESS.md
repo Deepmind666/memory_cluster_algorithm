@@ -2753,3 +2753,35 @@
   - [x] 附图 v2 与历史版路径已区分
   - [x] 当前状态与已知限制已明确
   - [x] 可直接用于外部审阅/交接
+
+## Entry R-052-CNIPA-PDF-Export-Flow-And-Push-Retry
+- Timestamp: 2026-02-15 02:56:00 +08:00
+- Stage: 提交准备阶段（导出能力补齐）
+- Actions:
+  - 重试推送 `origin/main`（两次）：
+    - 结果：网络阻断（GitHub 443 连接失败/重置），非代码问题。
+  - 新增批量导出脚本：
+    - `scripts/export_cnipa_figures_pdf.ps1`
+    - 功能：批量将 7 张 v2 附图导出为 PDF，并生成 `EXPORT_MANIFEST.txt`
+    - 稳定性修正：
+      - 输出目录绝对路径化
+      - 导出前删除旧同名 PDF
+      - 增加导出后等待与存在性校验
+      - 统一重定向原生进程输出，避免 stderr 噪声中断
+  - 新增导出说明文档：
+    - `docs/patent_kit/22_CNIPA_附图PDF导出说明.md`
+  - 更新专利总览索引：
+    - `docs/patent_kit/00_技术交底书_总览.md`（新增 22 号文档入口）
+  - 产出导出结果：
+    - `outputs/cnipa_submission/pdf/*.pdf`（7 个）
+    - `outputs/cnipa_submission/pdf/EXPORT_MANIFEST.txt`
+- Verification:
+  - `powershell -ExecutionPolicy Bypass -File scripts/export_cnipa_figures_pdf.ps1` PASS
+  - `outputs/cnipa_submission/pdf/EXPORT_MANIFEST.txt` 核对 PASS（7/7 文件齐全）
+  - 说明：远端推送仍受网络连接限制，待网络恢复后执行。
+- Review Checklist:
+  - [x] 附图 PDF 批量导出链路可复用
+  - [x] 导出清单可审计
+  - [x] 总览索引已同步
+  - [x] 网络阻断原因已隔离（非代码）
+  - [x] 后续只需补一次 push 即可完成远端同步
