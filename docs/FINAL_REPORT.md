@@ -299,3 +299,18 @@
   - abstract-figure recommendation.
 - Updated index:
   - `00_技术交底书_总览.md` now includes items 16-19.
+
+## R-047 Delta (2026-02-14)
+- Drew full patent figure set as SVG assets:
+  - `docs/patent_kit/figures/fig1_system_architecture.svg`
+  - `docs/patent_kit/figures/fig2_method_flow_s1_s8.svg`
+  - `docs/patent_kit/figures/fig3_data_structure_relationship.svg`
+  - `docs/patent_kit/figures/fig4_conflict_evidence_graph.svg`
+  - `docs/patent_kit/figures/fig5_dual_channel_merge_gate.svg`
+  - `docs/patent_kit/figures/fig6_retrieval_backref_flow.svg`
+  - `docs/patent_kit/figures/fig_abs_abstract_figure.svg`
+- Added visual index page:
+  - `docs/patent_kit/20_CNIPA_附图清单_预览.md`
+- Addressed review wording concerns in formal claims:
+  - removed "可选地" wording in claim 11/12 and replaced with standard limiting expression.
+  - added independent device claim (claim 15).

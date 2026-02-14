@@ -139,3 +139,11 @@
 4. 双通道门控是否同时体现“允许合并”和“阻断合并”两条分支。
 5. 是否体现 backrefs 回溯路径。
 
+## 十一、已生成附图文件路径
+1. 图1：`docs/patent_kit/figures/fig1_system_architecture.svg`
+2. 图2：`docs/patent_kit/figures/fig2_method_flow_s1_s8.svg`
+3. 图3：`docs/patent_kit/figures/fig3_data_structure_relationship.svg`
+4. 图4：`docs/patent_kit/figures/fig4_conflict_evidence_graph.svg`
+5. 图5：`docs/patent_kit/figures/fig5_dual_channel_merge_gate.svg`
+6. 图6：`docs/patent_kit/figures/fig6_retrieval_backref_flow.svg`
+7. 摘要附图：`docs/patent_kit/figures/fig_abs_abstract_figure.svg`

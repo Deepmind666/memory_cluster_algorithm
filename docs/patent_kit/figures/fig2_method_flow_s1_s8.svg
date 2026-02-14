@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="1450" viewBox="0 0 1300 1450">
+  <defs>
+    <style><![CDATA[
+      .title { font: 700 32px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #10243e; }
+      .step { fill: #f7fbff; stroke: #1d3f66; stroke-width: 2.4; }
+      .decision { fill: #fffaf2; stroke: #9a6a1f; stroke-width: 2.4; }
+      .st { font: 700 20px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #10243e; }
+      .lb { font: 500 18px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #173a60; }
+      .edge { stroke: #1d3f66; stroke-width: 2.8; fill: none; }
+      .edge2 { stroke: #9a6a1f; stroke-width: 2.8; fill: none; }
+    ]]></style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1d3f66"/>
+    </marker>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#9a6a1f"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1300" height="1450" fill="#ffffff"/>
+  <text x="650" y="56" text-anchor="middle" class="title">图2 多智能体协同记忆压缩与冲突治理方法流程示意图（S1-S8）</text>
+
+  <rect x="370" y="110" width="560" height="95" rx="16" ry="16" class="step"/>
+  <text x="650" y="150" text-anchor="middle" class="st">S1 接收并标准化记忆碎片</text>
+  <text x="650" y="178" text-anchor="middle" class="lb">输入：内容、来源、时间戳、槽位</text>
+
+  <rect x="370" y="250" width="560" height="95" rx="16" ry="16" class="step"/>
+  <text x="650" y="290" text-anchor="middle" class="st">S2 语义向量化与增量聚类</text>
+  <text x="650" y="318" text-anchor="middle" class="lb">输出：语义簇集合</text>
+
+  <rect x="370" y="390" width="560" height="95" rx="16" ry="16" class="step"/>
+  <text x="650" y="430" text-anchor="middle" class="st">S3 构建冲突证据图并计算优先级</text>
+  <text x="650" y="458" text-anchor="middle" class="lb">冲突值节点、值切换边、证据计数</text>
+
+  <rect x="370" y="530" width="560" height="95" rx="16" ry="16" class="step"/>
+  <text x="650" y="570" text-anchor="middle" class="st">S4 自适应预算分配</text>
+  <text x="650" y="598" text-anchor="middle" class="lb">冲突密度 + 来源熵 + 时效衰减</text>
+
+  <rect x="370" y="670" width="560" height="95" rx="16" ry="16" class="step"/>
+  <text x="650" y="710" text-anchor="middle" class="st">S5 双通道门控判定</text>
+  <text x="650" y="738" text-anchor="middle" class="lb">语义相似通道 + 冲突兼容通道</text>
+
+  <polygon points="650,815 840,905 650,995 460,905" class="decision"/>
+  <text x="650" y="895" text-anchor="middle" class="st">两个通道是否同时满足阈值？</text>
+  <text x="650" y="923" text-anchor="middle" class="lb">是 -> 允许合并；否 -> 阻断合并</text>
+
+  <rect x="140" y="1045" width="430" height="95" rx="16" ry="16" class="step"/>
+  <text x="355" y="1085" text-anchor="middle" class="st">S6 阻断合并并保留冲突记录</text>
+  <text x="355" y="1113" text-anchor="middle" class="lb">输出：冲突治理结果</text>
+
+  <rect x="730" y="1045" width="430" height="95" rx="16" ry="16" class="step"/>
+  <text x="945" y="1085" text-anchor="middle" class="st">S6' 执行合并并继续抽取</text>
+  <text x="945" y="1113" text-anchor="middle" class="lb">输出：合并后簇</text>
+
+  <rect x="370" y="1195" width="560" height="95" rx="16" ry="16" class="step"/>
+  <text x="650" y="1235" text-anchor="middle" class="st">S7 语义抽取（条件/反事实/否定/回指）</text>
+  <text x="650" y="1263" text-anchor="middle" class="lb">输出：冲突语义抽取结果</text>
+
+  <rect x="370" y="1335" width="560" height="95" rx="16" ry="16" class="step"/>
+  <text x="650" y="1375" text-anchor="middle" class="st">S8 生成摘要并保存 backrefs 索引</text>
+  <text x="650" y="1403" text-anchor="middle" class="lb">检索先返回摘要，再按需展开证据</text>
+
+  <path d="M650 205 L650 250" class="edge" marker-end="url(#arrow)"/>
+  <path d="M650 345 L650 390" class="edge" marker-end="url(#arrow)"/>
+  <path d="M650 485 L650 530" class="edge" marker-end="url(#arrow)"/>
+  <path d="M650 625 L650 670" class="edge" marker-end="url(#arrow)"/>
+  <path d="M650 765 L650 815" class="edge" marker-end="url(#arrow)"/>
+
+  <path d="M460 905 L355 1045" class="edge2" marker-end="url(#arrow2)"/>
+  <text x="390" y="980" text-anchor="middle" class="lb">否</text>
+
+  <path d="M840 905 L945 1045" class="edge2" marker-end="url(#arrow2)"/>
+  <text x="910" y="980" text-anchor="middle" class="lb">是</text>
+
+  <path d="M355 1140 L355 1242 L370 1242" class="edge" marker-end="url(#arrow)"/>
+  <path d="M945 1140 L945 1242 L930 1242" class="edge" marker-end="url(#arrow)"/>
+  <path d="M650 1290 L650 1335" class="edge" marker-end="url(#arrow)"/>
+</svg>
+

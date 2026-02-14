@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="980" viewBox="0 0 1800 980">
+  <defs>
+    <style><![CDATA[
+      .title { font: 700 34px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #10243e; }
+      .subtitle { font: 500 20px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #2d4668; }
+      .box { fill: #f7fbff; stroke: #1d3f66; stroke-width: 2.4; }
+      .module { font: 700 20px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #10243e; }
+      .label { font: 500 17px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #173a60; }
+      .edge { stroke: #1d3f66; stroke-width: 2.8; fill: none; }
+    ]]></style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1d3f66"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="980" fill="#ffffff"/>
+  <text x="900" y="58" text-anchor="middle" class="title">图1 多智能体协同记忆压缩与冲突治理系统总体架构示意图</text>
+  <text x="900" y="92" text-anchor="middle" class="subtitle">主链路：采集 -> 向量化 -> 聚类 -> 冲突治理 -> 预算策略 -> 双通道门控 -> 语义抽取 -> 索引检索</text>
+
+  <rect x="70" y="150" rx="16" ry="16" width="190" height="90" class="box"/>
+  <text x="165" y="195" text-anchor="middle" class="module">多智能体写入流</text>
+  <text x="165" y="220" text-anchor="middle" class="label">Planner/Writer/Verifier</text>
+
+  <rect x="320" y="150" rx="16" ry="16" width="180" height="90" class="box"/>
+  <text x="410" y="190" text-anchor="middle" class="module">101 采集模块</text>
+  <text x="410" y="217" text-anchor="middle" class="label">标准化碎片输入</text>
+
+  <rect x="550" y="150" rx="16" ry="16" width="180" height="90" class="box"/>
+  <text x="640" y="190" text-anchor="middle" class="module">102 向量化模块</text>
+  <text x="640" y="217" text-anchor="middle" class="label">语义表示生成</text>
+
+  <rect x="780" y="150" rx="16" ry="16" width="180" height="90" class="box"/>
+  <text x="870" y="190" text-anchor="middle" class="module">103 增量聚类模块</text>
+  <text x="870" y="217" text-anchor="middle" class="label">簇归并/新建簇</text>
+
+  <rect x="1010" y="150" rx="16" ry="16" width="210" height="90" class="box"/>
+  <text x="1115" y="190" text-anchor="middle" class="module">104 冲突证据图模块</text>
+  <text x="1115" y="217" text-anchor="middle" class="label">冲突检测与优先级</text>
+
+  <rect x="1270" y="150" rx="16" ry="16" width="190" height="90" class="box"/>
+  <text x="1365" y="190" text-anchor="middle" class="module">105 自适应预算</text>
+  <text x="1365" y="217" text-anchor="middle" class="label">冲突密度/来源熵/时效</text>
+
+  <rect x="320" y="330" rx="16" ry="16" width="220" height="90" class="box"/>
+  <text x="430" y="370" text-anchor="middle" class="module">106 双通道门控</text>
+  <text x="430" y="397" text-anchor="middle" class="label">语义通道 + 冲突兼容通道</text>
+
+  <rect x="610" y="330" rx="16" ry="16" width="220" height="90" class="box"/>
+  <text x="720" y="370" text-anchor="middle" class="module">107 语义抽取与回指</text>
+  <text x="720" y="397" text-anchor="middle" class="label">条件/反事实/否定/回指</text>
+
+  <rect x="900" y="330" rx="16" ry="16" width="220" height="90" class="box"/>
+  <text x="1010" y="370" text-anchor="middle" class="module">108 索引与检索</text>
+  <text x="1010" y="397" text-anchor="middle" class="label">摘要存储 + backrefs</text>
+
+  <rect x="1190" y="330" rx="16" ry="16" width="200" height="90" class="box"/>
+  <text x="1290" y="370" text-anchor="middle" class="module">簇摘要输出</text>
+  <text x="1290" y="397" text-anchor="middle" class="label">聚类压缩结果</text>
+
+  <rect x="1450" y="330" rx="16" ry="16" width="230" height="90" class="box"/>
+  <text x="1565" y="370" text-anchor="middle" class="module">证据回溯输出</text>
+  <text x="1565" y="397" text-anchor="middle" class="label">按需展开原始碎片</text>
+
+  <rect x="1010" y="520" rx="16" ry="16" width="240" height="90" class="box"/>
+  <text x="1130" y="560" text-anchor="middle" class="module">冲突记录输出</text>
+  <text x="1130" y="587" text-anchor="middle" class="label">冲突值节点/切换边/证据计数</text>
+
+  <path d="M 260 195 L 320 195" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 500 195 L 550 195" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 730 195 L 780 195" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 960 195 L 1010 195" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 1220 195 L 1270 195" class="edge" marker-end="url(#arrow)"/>
+
+  <path d="M 1365 240 L 1365 275 L 430 275 L 430 330" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 540 375 L 610 375" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 830 375 L 900 375" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 1120 375 L 1190 375" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 1390 375 L 1450 375" class="edge" marker-end="url(#arrow)"/>
+  <path d="M 1115 240 L 1115 520" class="edge" marker-end="url(#arrow)"/>
+
+  <rect x="70" y="700" rx="14" ry="14" width="1660" height="190" fill="#f2f7ff" stroke="#98b2d0" stroke-width="1.8"/>
+  <text x="95" y="738" class="module">说明：</text>
+  <text x="170" y="738" class="label">1) 主链路覆盖权利要求核心步骤；2) 冲突记录输出用于可审计治理；3) 索引与检索模块提供摘要到证据的可逆回溯。</text>
+  <text x="95" y="775" class="label">4) 图中模块编号与说明书[0046]一致：101-108；5) 可选加速路径（剪枝/Candidate/ANN）可部署于103与106之间，不改变核心治理链路。</text>
+  <text x="95" y="812" class="label">6) 摘要附图建议采用本图简化版（仅保留101-108主链路）。</text>
+</svg>
+

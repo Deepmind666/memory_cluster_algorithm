@@ -356,3 +356,16 @@ Next:
 1. Send `docs/patent_kit/00-19` full package to patent agent.
 2. Ask agent to return first CNIPA submission draft based on 16-19 as primary text and 00-15 as supporting evidence.
 3. Perform technical consistency check only (title, terms, step chain, claim support), then finalize for CPC filing.
+
+## R-047 Plan Update (2026-02-14)
+Completed:
+- Completed full figure drawing delivery as SVG (`图1-图6 + 摘要附图`).
+- Added visual figure index document (`20_CNIPA_附图清单_预览.md`) for quick review/export.
+- Applied review-driven formal claim wording fixes:
+  - replaced disputed "可选地" claim wording with limiting expression,
+  - added independent device claim.
+
+Next:
+1. Export SVG to agent-preferred formats (if needed: PNG/PDF) while keeping SVG as master.
+2. Have patent agent perform final legal polishing on 16-20 package.
+3. Run final terminology consistency pass on agent-returned draft before CPC submission.

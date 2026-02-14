@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520">
+  <defs>
+    <style><![CDATA[
+      .title { font: 700 28px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #10243e; }
+      .box { fill: #f8fbff; stroke: #23456b; stroke-width: 2.2; }
+      .module { font: 700 18px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #10243e; }
+      .edge { stroke: #23456b; stroke-width: 2.6; fill: none; }
+    ]]></style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#23456b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="520" fill="#ffffff"/>
+  <text x="700" y="52" text-anchor="middle" class="title">摘要附图：多智能体协同记忆压缩与冲突治理主链路示意</text>
+
+  <rect x="40" y="190" rx="14" ry="14" width="130" height="80" class="box"/>
+  <text x="105" y="236" text-anchor="middle" class="module">101 采集</text>
+
+  <rect x="210" y="190" rx="14" ry="14" width="130" height="80" class="box"/>
+  <text x="275" y="236" text-anchor="middle" class="module">102 向量化</text>
+
+  <rect x="380" y="190" rx="14" ry="14" width="130" height="80" class="box"/>
+  <text x="445" y="236" text-anchor="middle" class="module">103 聚类</text>
+
+  <rect x="550" y="190" rx="14" ry="14" width="150" height="80" class="box"/>
+  <text x="625" y="236" text-anchor="middle" class="module">104 冲突证据图</text>
+
+  <rect x="740" y="190" rx="14" ry="14" width="130" height="80" class="box"/>
+  <text x="805" y="236" text-anchor="middle" class="module">105 预算</text>
+
+  <rect x="910" y="190" rx="14" ry="14" width="160" height="80" class="box"/>
+  <text x="990" y="236" text-anchor="middle" class="module">106 双通道门控</text>
+
+  <rect x="1110" y="190" rx="14" ry="14" width="130" height="80" class="box"/>
+  <text x="1175" y="236" text-anchor="middle" class="module">107 抽取回指</text>
+
+  <rect x="1270" y="190" rx="14" ry="14" width="100" height="80" class="box"/>
+  <text x="1320" y="236" text-anchor="middle" class="module">108 检索</text>
+
+  <path d="M170 230 L210 230" class="edge" marker-end="url(#arrow)"/>
+  <path d="M340 230 L380 230" class="edge" marker-end="url(#arrow)"/>
+  <path d="M510 230 L550 230" class="edge" marker-end="url(#arrow)"/>
+  <path d="M700 230 L740 230" class="edge" marker-end="url(#arrow)"/>
+  <path d="M870 230 L910 230" class="edge" marker-end="url(#arrow)"/>
+  <path d="M1070 230 L1110 230" class="edge" marker-end="url(#arrow)"/>
+  <path d="M1240 230 L1270 230" class="edge" marker-end="url(#arrow)"/>
+</svg>
+

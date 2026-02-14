@@ -2590,3 +2590,36 @@
   - [x] 摘要已形成可提交文本并给出摘要附图建议
   - [x] 附图文字描述稿可直接交给制图员绘图
   - [x] 交底总览已同步新增正式稿入口
+
+## Entry R-047-CNIPA-Figures-Delivery
+- Timestamp: 2026-02-14 21:15:27 +08:00
+- Stage: 材料撰写阶段（附图落地 + 权利要求格式修正）
+- Actions:
+  - 新增可直接提交前使用的 SVG 附图：
+    - `docs/patent_kit/figures/fig1_system_architecture.svg`
+    - `docs/patent_kit/figures/fig2_method_flow_s1_s8.svg`
+    - `docs/patent_kit/figures/fig3_data_structure_relationship.svg`
+    - `docs/patent_kit/figures/fig4_conflict_evidence_graph.svg`
+    - `docs/patent_kit/figures/fig5_dual_channel_merge_gate.svg`
+    - `docs/patent_kit/figures/fig6_retrieval_backref_flow.svg`
+    - `docs/patent_kit/figures/fig_abs_abstract_figure.svg`
+  - 新增附图预览页：
+    - `docs/patent_kit/20_CNIPA_附图清单_预览.md`
+  - 同步修正权利要求格式问题（依据评审意见）：
+    - `docs/patent_kit/17_CNIPA_权利要求书_正式稿.md`
+      - 删除“可选地”措辞，改为“所述方法还包括...”
+      - 新增装置独立权利要求（权利要求15）
+  - 同步文档索引：
+    - `docs/patent_kit/00_技术交底书_总览.md` 增加 `20_CNIPA_附图清单_预览.md`
+    - `docs/patent_kit/19_CNIPA_附图文字描述稿.md` 新增已生成附图路径清单
+    - `docs/patent_kit/18_CNIPA_说明书摘要_正式稿.md` 补充摘要附图文件路径
+- Verification:
+  - 文档一致性自查：PASS（16/17/18/19/20 在图号、标号、主链路上保持一致）
+  - 文件完整性自查：PASS（图1-图6+摘要附图共7个 SVG 均已生成）
+  - 说明：按用户当前阶段目标，本轮不跑测试与评审流程。
+- Review Checklist:
+  - [x] 图1-图6全部落地
+  - [x] 摘要附图已生成
+  - [x] 附图文字稿与实际文件路径一致
+  - [x] 权利要求“可选地”措辞已替换
+  - [x] 装置独立权利要求已补充

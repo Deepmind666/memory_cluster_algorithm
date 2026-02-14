@@ -5,4 +5,4 @@
 
 ## 摘要附图建议
 建议采用图1（系统总体架构示意图）作为摘要附图。
-
+对应文件：`docs/patent_kit/figures/fig_abs_abstract_figure.svg`。
