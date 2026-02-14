@@ -369,3 +369,17 @@ Next:
 1. Export SVG to agent-preferred formats (if needed: PNG/PDF) while keeping SVG as master.
 2. Have patent agent perform final legal polishing on 16-20 package.
 3. Run final terminology consistency pass on agent-returned draft before CPC submission.
+
+## R-048 Plan Update (2026-02-14)
+Completed:
+- Refined claims/spec package according to strict review feedback for advisor pre-check:
+  - independent claim scope refactor,
+  - dependency re-layering,
+  - prior-art references,
+  - definitions + formulas + quantitative embodiments.
+- Added `21_师兄评审前_改进建议与变更说明.md` for direct expert review.
+
+Next:
+1. Ask advisor to focus on independent claim breadth vs support boundary.
+2. After advisor comments, perform one final claim/spec wording round before sending to agent.
+3. Keep figure assets unchanged unless advisor requests structural redraw.

@@ -314,3 +314,16 @@
 - Addressed review wording concerns in formal claims:
   - removed "可选地" wording in claim 11/12 and replaced with standard limiting expression.
   - added independent device claim (claim 15).
+
+## R-048 Delta (2026-02-14)
+- Strengthened formal claims for broader defense posture:
+  - refactored independent claim 1 to core chain,
+  - moved NLP-heavy extraction details to dependent claims,
+  - kept complete independent coverage for method/system/device/medium.
+- Strengthened specification for CNIPA review practicality:
+  - added explicit prior-art references in background,
+  - added terminology definitions for key coined terms,
+  - added example formulas (priority/budget/compatibility),
+  - added quantitative 2000-scale embodiments using existing benchmark outputs.
+- Added advisor-review handoff note:
+  - `docs/patent_kit/21_师兄评审前_改进建议与变更说明.md`.
