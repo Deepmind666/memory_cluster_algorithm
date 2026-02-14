@@ -274,3 +274,13 @@
   - both now upload `outputs/ci_outputs/ci_guardrail_bundle_summary.json`.
 - Test baseline update:
   - full suite `102/102 -> 108/108`.
+
+## R-045 Delta (2026-02-14)
+- Switched to patent-material handover phase (agent track), no new algorithm/test scope in this round.
+- Added agent handover package in `docs/patent_kit/`:
+  - `12_代理人交接包_一页纸.md`
+  - `13_代理人交接包_权利要求策略说明.md`
+  - `14_代理人交接包_证据索引与提交流程.md`
+  - `15_代理人沟通邮件模板.md`
+- Updated handover index:
+  - `00_技术交底书_总览.md` now includes items 12-15.

@@ -327,3 +327,18 @@ Next:
 1. Keep strict streak threshold disabled in default CI, and only enable it intentionally in dedicated branches/environments after trend stabilization.
 2. If enabled later, set threshold based on historical trend variance to avoid false blockers from one-off runner noise.
 3. Continue core algorithm/experiment track while maintaining CI guardrail determinism and isolation guarantees.
+
+## R-045 Plan Update (2026-02-14)
+Completed:
+- Entered patent material drafting handover phase.
+- Added agent handover package documents in `docs/patent_kit/` (12-15):
+  - one-page technical brief,
+  - claim strategy note,
+  - evidence index + submission flow,
+  - email template.
+- Updated `00_技术交底书_总览.md` index for direct package delivery.
+
+Next:
+1. Send `docs/patent_kit/00-15` package to patent agent.
+2. Wait for first formal CNIPA-format draft from agent.
+3. Perform technical-fact-only proofreading on agent draft (no new R&D/testing expansion).
