@@ -2652,3 +2652,104 @@
   - [x] 装置独权完整保留
   - [x] 说明书补齐术语、公式、定量实施例
   - [x] 已形成可给师兄直接审阅的变更说明
+
+## Entry R-049-CNIPA-Figure-Compliance-Hardening
+- Timestamp: 2026-02-14 21:47:46 +08:00
+- Stage: 材料撰写阶段（CNIPA 附图合规收口）
+- Actions:
+  - 重绘并规范化关键附图（v2）：
+    - `docs/patent_kit/figures/fig2_v2_method_flow.svg`
+    - `docs/patent_kit/figures/fig3_v2_data_structure.svg`
+    - `docs/patent_kit/figures/fig4_v2_conflict_evidence_graph.svg`
+    - `docs/patent_kit/figures/fig5_v2_dual_channel_gate.svg`
+  - 合规点落地：
+    - 图内文本去英文、去公式化表达（仅保留中文标号与简要标签）
+    - 保持纯黑白线框（仅 `#000/#fff`）
+    - 删除说明性大段文本框
+    - 图2补齐起止符号、明确判定分支与汇合
+    - 图5改为标准 D 形与门符号
+    - 图3虚线关系改为标号 `306/307/308`
+  - 文档映射同步到 v2 图件：
+    - `docs/patent_kit/18_CNIPA_说明书摘要_正式稿.md`
+    - `docs/patent_kit/19_CNIPA_附图文字描述稿.md`
+    - `docs/patent_kit/20_CNIPA_附图清单_预览.md`
+    - `docs/patent_kit/21_师兄评审前_改进建议与变更说明.md`
+    - `docs/FINAL_REPORT.md`
+- Verification:
+  - `rg -n ">[^<]*[A-Za-z][^<]*<" docs/patent_kit/figures -g "fig*_v2*.svg"` PASS（无英文文本）
+  - `rg -n "#[0-9A-Fa-f]{3,6}" docs/patent_kit/figures -g "fig*_v2*.svg"` PASS（仅 `#000/#fff`）
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS（`108/108`）
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md --core-stability outputs/core_claim_stability_semi_real_5000_realistic.json --core-stability outputs/core_claim_stability_semi_real_5000_stress.json` PASS（`passed=true`, `check_count=14`, `blocker_failures=0`）
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS（`validation.passed=true`）
+- Review Checklist:
+  - [x] 强制项：纯黑白、无英文、无说明框
+  - [x] 图2流程符号与分支汇合清晰
+  - [x] 图5与门符号改为标准技术制图表达
+  - [x] 附图清单与正式材料路径已切换到 v2
+  - [x] 代码质量门（测试/guardrail/证据包）通过
+
+## Entry R-050-CNIPA-Figure-Review-Fixes-P1P2
+- Timestamp: 2026-02-15 01:32:14 +08:00
+- Stage: 材料撰写阶段（评审问题闭环修复）
+- Actions:
+  - 修复 P1-1（图1底部输出框重叠）：
+    - `docs/patent_kit/figures/fig1_v2_system_architecture.svg`
+    - 输出箭头 `x=210/330 -> 160/380`
+    - 输出框调整为：左框 `x=80,width=160`，右框 `x=300,width=160`，消除重叠
+  - 修复 P2-1（图4缺少 401-1 到 404 虚线连接）：
+    - `docs/patent_kit/figures/fig4_v2_conflict_evidence_graph.svg`
+    - 新增 `401-1 -> 404` 虚线；保留其余两条虚线
+  - 修复 P2-2（附图标记总表缺少 500）：
+    - `docs/patent_kit/19_CNIPA_附图文字描述稿.md`
+    - 增加 `500：候选簇对输入`
+  - 修复 P2-3（摘要附图指引矛盾）：
+    - `docs/patent_kit/18_CNIPA_说明书摘要_正式稿.md`
+    - `docs/patent_kit/19_CNIPA_附图文字描述稿.md`
+    - 统一为“采用独立简化版摘要附图（不直接复用图1）”
+  - 修复 P2-4（图1版式描述与实际不符）：
+    - `docs/patent_kit/19_CNIPA_附图文字描述稿.md`
+    - “左到右主链路”改为“自上而下主链路”
+  - 一并修复 P3：
+    - `docs/patent_kit/figures/fig4_v2_conflict_evidence_graph.svg`
+      - 标题统一为“冲突证据图构建与冲突优先级计算示意图”
+    - `docs/patent_kit/figures/fig5_v2_dual_channel_gate.svg`
+      - `viewBox/height: 620 -> 500`
+    - `docs/patent_kit/figures/fig6_v2_retrieval_backref.svg`
+      - `viewBox/height: 440 -> 340`
+- Verification:
+  - SVG XML 结构校验（7/7）：PASS
+  - 英文文本扫描：PASS（`fig*_v2*.svg` 未发现英文文本节点）
+  - 颜色扫描：PASS（`fig*_v2*.svg` 仅 `#000/#fff`）
+  - `python -m compileall -q src scripts tests` PASS
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS（`108/108`）
+  - `python scripts/run_stage2_guardrail.py --output outputs/stage2_guardrail.json --report docs/eval/stage2_guardrail_report.md --core-stability outputs/core_claim_stability_semi_real_5000_realistic.json --core-stability outputs/core_claim_stability_semi_real_5000_stress.json` PASS（`passed=true`, `check_count=14`, `blocker_failures=0`）
+  - `python scripts/build_patent_evidence_pack.py --output outputs/patent_evidence_pack.json --report "docs/patent_kit/10_区别特征_技术效果_实验映射.md"` PASS（`validation.passed=true`）
+- Review Checklist:
+  - [x] P1 重叠问题闭环
+  - [x] P2 四项全部闭环
+  - [x] 图题与文档措辞统一
+  - [x] 附图版式空白优化完成
+  - [x] 自查与质量门验证通过
+
+## Entry R-051-Full-Work-Inventory-And-Handover-Index
+- Timestamp: 2026-02-15 01:32:14 +08:00
+- Stage: 交接收口阶段（全量梳理）
+- Actions:
+  - 新增全量工作梳理文档：
+    - `docs/review/r051_全量工作梳理与文件路径总表.md`
+  - 文档内容覆盖：
+    - 项目目标与当前状态
+    - 核心代码/脚本/测试/评测/专利材料/附图路径总表
+    - R-049/R-050 关键修复映射
+    - 提交前建议与交接要点
+- Verification:
+  - 路径完整性抽样核对：PASS（核心目录 `src/ scripts/ tests/ docs/patent_kit/ docs/eval/ docs/review/`）
+  - 与现有进度条目一致性：PASS（R-049/R-050 修复点与文件一致）
+  - 说明：本条目为梳理文档收口，不引入算法行为变更。
+- Review Checklist:
+  - [x] 工作内容与文件路径已结构化
+  - [x] 专利提交相关文件已单独归组
+  - [x] 附图 v2 与历史版路径已区分
+  - [x] 当前状态与已知限制已明确
+  - [x] 可直接用于外部审阅/交接

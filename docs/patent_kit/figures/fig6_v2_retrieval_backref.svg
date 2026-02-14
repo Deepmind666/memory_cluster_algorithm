@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 340" width="520" height="340">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#000"/>
+    </marker>
+  </defs>
+  <rect width="520" height="340" fill="#fff"/>
+
+  <text x="260" y="26" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="13" font-weight="bold">图6 基于簇摘要与回溯索引的检索展开流程示意图</text>
+
+  <!-- 601 检索请求 -->
+  <rect x="30" y="65" width="130" height="44" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="95" y="84" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">601</text>
+  <text x="95" y="100" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">检索请求</text>
+  <line x1="160" y1="87" x2="195" y2="87" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+
+  <!-- 108 索引检索模块 -->
+  <rect x="197" y="65" width="140" height="44" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="267" y="84" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">108 索引与检索模块</text>
+  <text x="267" y="100" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">命中候选簇并排序</text>
+  <line x1="337" y1="87" x2="372" y2="87" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+
+  <!-- 602 簇摘要结果 -->
+  <rect x="374" y="65" width="130" height="44" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="439" y="84" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">602</text>
+  <text x="439" y="100" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">簇摘要结果</text>
+
+  <!-- 箭头向下 -->
+  <line x1="439" y1="109" x2="439" y2="155" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+
+  <!-- 603 按需回溯请求 -->
+  <rect x="374" y="157" width="130" height="44" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="439" y="176" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">603</text>
+  <text x="439" y="192" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">按需回溯请求</text>
+  <line x1="374" y1="179" x2="340" y2="179" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+
+  <!-- 305 回溯索引映射 -->
+  <rect x="197" y="157" width="140" height="44" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="267" y="176" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">305 回溯索引</text>
+  <text x="267" y="192" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">摘要段→碎片列表</text>
+  <line x1="197" y1="179" x2="163" y2="179" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+
+  <!-- 301 原始碎片库 -->
+  <rect x="30" y="157" width="130" height="44" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="95" y="176" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">301 原始碎片库</text>
+  <text x="95" y="192" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">证据定位与加载</text>
+
+  <!-- 两路汇合向下 -->
+  <line x1="267" y1="201" x2="267" y2="250" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <line x1="95" y1="201" x2="95" y2="240" stroke="#000" stroke-width="1.2"/>
+  <line x1="95" y1="240" x2="267" y2="240" stroke="#000" stroke-width="1.0"/>
+
+  <!-- 604 原始证据展开结果 -->
+  <rect x="120" y="252" width="280" height="50" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="260" y="274" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">604 原始证据展开结果</text>
+  <text x="260" y="292" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">冲突值来源、时间顺序、原文片段、槽位</text>
+</svg>

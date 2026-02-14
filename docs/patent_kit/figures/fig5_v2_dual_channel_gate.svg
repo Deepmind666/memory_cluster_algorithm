@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 500" width="520" height="500">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#000"/>
+    </marker>
+  </defs>
+  <rect width="520" height="500" fill="#fff"/>
+
+  <text x="260" y="26" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="13" font-weight="bold">图5 双通道合并门控判定示意图</text>
+
+  <rect x="185" y="70" width="150" height="44" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="260" y="89" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">500</text>
+  <text x="260" y="106" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">候选簇对输入</text>
+
+  <line x1="260" y1="114" x2="260" y2="150" stroke="#000" stroke-width="1.2"/>
+  <line x1="260" y1="150" x2="130" y2="150" stroke="#000" stroke-width="1.2"/>
+  <line x1="260" y1="150" x2="390" y2="150" stroke="#000" stroke-width="1.2"/>
+  <line x1="130" y1="150" x2="130" y2="182" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <line x1="390" y1="150" x2="390" y2="182" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+
+  <polygon points="130,182 200,232 130,282 60,232" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="130" y="226" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9" font-weight="bold">501</text>
+  <text x="130" y="242" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">语义相似度</text>
+  <text x="130" y="258" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">判定通道</text>
+
+  <polygon points="390,182 460,232 390,282 320,232" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="390" y="226" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9" font-weight="bold">502</text>
+  <text x="390" y="242" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">冲突兼容度</text>
+  <text x="390" y="258" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">判定通道</text>
+
+  <line x1="130" y1="282" x2="130" y2="350" stroke="#000" stroke-width="1.2"/>
+  <line x1="390" y1="282" x2="390" y2="350" stroke="#000" stroke-width="1.2"/>
+  <line x1="130" y1="350" x2="235" y2="350" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <line x1="390" y1="350" x2="285" y2="350" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+
+  <path d="M235 315 L260 315 A35 35 0 0 1 260 385 L235 385 Z" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="252" y="344" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9" font-weight="bold">505</text>
+  <text x="252" y="362" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">与门</text>
+
+  <line x1="295" y1="338" x2="360" y2="298" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <text x="330" y="312" font-family="SimSun,STSong,serif" font-size="9">是</text>
+  <rect x="362" y="274" width="120" height="48" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="422" y="293" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">503</text>
+  <text x="422" y="311" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">允许合并</text>
+
+  <line x1="295" y1="362" x2="360" y2="422" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <text x="332" y="396" font-family="SimSun,STSong,serif" font-size="9">否</text>
+  <rect x="362" y="398" width="120" height="48" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="422" y="417" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">504</text>
+  <text x="422" y="435" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">阻断合并</text>
+</svg>

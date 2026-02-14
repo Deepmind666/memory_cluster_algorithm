@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 560" width="520" height="560">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#000"/>
+    </marker>
+  </defs>
+  <rect width="520" height="560" fill="#fff"/>
+
+  <text x="260" y="26" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="13" font-weight="bold">图4 冲突证据图构建与冲突优先级计算示意图</text>
+
+  <circle cx="110" cy="160" r="52" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="110" y="148" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">401-1</text>
+  <text x="110" y="166" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">冲突值甲</text>
+  <text x="110" y="184" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">403 证据计数</text>
+
+  <circle cx="300" cy="120" r="52" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="300" y="108" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">401-2</text>
+  <text x="300" y="126" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">冲突值乙</text>
+  <text x="300" y="144" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">403 证据计数</text>
+
+  <circle cx="280" cy="320" r="52" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="280" y="308" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">401-3</text>
+  <text x="280" y="326" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">冲突值丙</text>
+  <text x="280" y="344" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="9">403 证据计数</text>
+
+  <line x1="160" y1="140" x2="244" y2="126" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <text x="198" y="120" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="8">402 值切换</text>
+
+  <line x1="144" y1="204" x2="236" y2="288" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <text x="174" y="254" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="8">402 值切换</text>
+
+  <line x1="308" y1="176" x2="286" y2="266" stroke="#000" stroke-width="1.2" marker-end="url(#a)"/>
+  <text x="320" y="226" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="8">402 值切换</text>
+
+  <rect x="370" y="188" width="138" height="186" fill="none" stroke="#000" stroke-width="1.4"/>
+  <text x="439" y="212" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">404</text>
+  <text x="439" y="230" text-anchor="middle" font-family="SimSun,STSong,serif" font-size="10" font-weight="bold">冲突优先级</text>
+  <line x1="370" y1="240" x2="508" y2="240" stroke="#000" stroke-width="0.8"/>
+  <text x="382" y="262" font-family="SimSun,STSong,serif" font-size="9">冲突值数量</text>
+  <text x="382" y="282" font-family="SimSun,STSong,serif" font-size="9">值切换次数</text>
+  <text x="382" y="302" font-family="SimSun,STSong,serif" font-size="9">证据总量</text>
+  <line x1="370" y1="316" x2="508" y2="316" stroke="#000" stroke-width="0.8"/>
+  <text x="382" y="338" font-family="SimSun,STSong,serif" font-size="9">优先级排序结果</text>
+  <text x="382" y="358" font-family="SimSun,STSong,serif" font-size="9">输出至后续模块</text>
+
+  <line x1="162" y1="186" x2="370" y2="252" stroke="#000" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#a)"/>
+  <line x1="348" y1="130" x2="370" y2="210" stroke="#000" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#a)"/>
+  <line x1="332" y1="320" x2="370" y2="316" stroke="#000" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#a)"/>
+</svg>

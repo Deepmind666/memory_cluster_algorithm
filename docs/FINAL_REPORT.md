@@ -302,13 +302,13 @@
 
 ## R-047 Delta (2026-02-14)
 - Drew full patent figure set as SVG assets:
-  - `docs/patent_kit/figures/fig1_system_architecture.svg`
-  - `docs/patent_kit/figures/fig2_method_flow_s1_s8.svg`
-  - `docs/patent_kit/figures/fig3_data_structure_relationship.svg`
-  - `docs/patent_kit/figures/fig4_conflict_evidence_graph.svg`
-  - `docs/patent_kit/figures/fig5_dual_channel_merge_gate.svg`
-  - `docs/patent_kit/figures/fig6_retrieval_backref_flow.svg`
-  - `docs/patent_kit/figures/fig_abs_abstract_figure.svg`
+  - `docs/patent_kit/figures/fig1_v2_system_architecture.svg`
+  - `docs/patent_kit/figures/fig2_v2_method_flow.svg`
+  - `docs/patent_kit/figures/fig3_v2_data_structure.svg`
+  - `docs/patent_kit/figures/fig4_v2_conflict_evidence_graph.svg`
+  - `docs/patent_kit/figures/fig5_v2_dual_channel_gate.svg`
+  - `docs/patent_kit/figures/fig6_v2_retrieval_backref.svg`
+  - `docs/patent_kit/figures/fig_abs_v2_abstract.svg`
 - Added visual index page:
   - `docs/patent_kit/20_CNIPA_附图清单_预览.md`
 - Addressed review wording concerns in formal claims:
