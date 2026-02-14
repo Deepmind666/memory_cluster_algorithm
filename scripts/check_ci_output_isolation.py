@@ -19,6 +19,7 @@ _OUTPUT_FLAGS = {
     "--candidate-stress",
     "--ann-hybrid",
     "--candidate-benchmark",
+    "--core-stability",
 }
 
 _FORBIDDEN_ROOT_JSON_PATHS = {
@@ -28,6 +29,8 @@ _FORBIDDEN_ROOT_JSON_PATHS = {
     "outputs/candidate_profile_validation_stress.json",
     "outputs/ann_hybrid_benchmark.json",
     "outputs/stage2_guardrail.json",
+    "outputs/core_claim_stability_ci_realistic.json",
+    "outputs/core_claim_stability_ci_stress.json",
 }
 
 _REQUIRED_WORKFLOW_PATHS: dict[str, set[str]] = {
@@ -106,6 +109,8 @@ def _default_bundle_commands() -> list[list[str]]:
         warmups=0,
         realistic_dataset=Path("outputs/ci_semi_real_240_realistic.jsonl"),
         stress_dataset=Path("outputs/ci_semi_real_240_stress.jsonl"),
+        core_stability_realistic=Path("outputs/ci_outputs/core_claim_stability_ci_realistic.json"),
+        core_stability_stress=Path("outputs/ci_outputs/core_claim_stability_ci_stress.json"),
         ci_outputs=Path("outputs/ci_outputs"),
         ci_reports=Path("outputs/ci_reports"),
     )

@@ -5,7 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.run_ci_guardrail_bundle import _build_bundle_commands, _write_semi_real_dataset
+from scripts.run_ci_guardrail_bundle import (
+    _build_bundle_commands,
+    _write_core_stability_fixture,
+    _write_semi_real_dataset,
+)
 
 
 class TestCiGuardrailBundleUnit(unittest.TestCase):
@@ -33,6 +37,8 @@ class TestCiGuardrailBundleUnit(unittest.TestCase):
     def test_build_bundle_commands_isolates_ci_outputs(self) -> None:
         ci_outputs = Path("outputs/ci_outputs")
         ci_reports = Path("outputs/ci_reports")
+        core_realistic = ci_outputs / "core_claim_stability_ci_realistic.json"
+        core_stress = ci_outputs / "core_claim_stability_ci_stress.json"
         commands = _build_bundle_commands(
             py="python",
             frag_count=120,
@@ -41,6 +47,8 @@ class TestCiGuardrailBundleUnit(unittest.TestCase):
             warmups=0,
             realistic_dataset=Path("outputs/ci_semi_real_240_realistic.jsonl"),
             stress_dataset=Path("outputs/ci_semi_real_240_stress.jsonl"),
+            core_stability_realistic=core_realistic,
+            core_stability_stress=core_stress,
             ci_outputs=ci_outputs,
             ci_reports=ci_reports,
         )
@@ -48,7 +56,15 @@ class TestCiGuardrailBundleUnit(unittest.TestCase):
         outputs_seen: list[str] = []
         for command in commands:
             for idx, token in enumerate(command):
-                if token in {"--output", "--candidate-synthetic", "--candidate-realistic", "--candidate-stress", "--ann-hybrid", "--candidate-benchmark"}:
+                if token in {
+                    "--output",
+                    "--candidate-synthetic",
+                    "--candidate-realistic",
+                    "--candidate-stress",
+                    "--ann-hybrid",
+                    "--candidate-benchmark",
+                    "--core-stability",
+                }:
                     outputs_seen.append(str(command[idx + 1]))
         self.assertTrue(outputs_seen)
         self.assertTrue(all(path.startswith("outputs/ci_outputs/") for path in outputs_seen))
@@ -63,6 +79,32 @@ class TestCiGuardrailBundleUnit(unittest.TestCase):
             any("--candidate-benchmark outputs/ci_outputs/candidate_filter_benchmark.json" in line for line in joined),
             "stage2 guardrail should consume candidate benchmark from outputs/ci_outputs/",
         )
+        self.assertTrue(
+            any("--core-stability outputs/ci_outputs/core_claim_stability_ci_realistic.json" in line for line in joined),
+            "stage2 guardrail should consume realistic core-stability fixture from outputs/ci_outputs/",
+        )
+        self.assertTrue(
+            any("--core-stability outputs/ci_outputs/core_claim_stability_ci_stress.json" in line for line in joined),
+            "stage2 guardrail should consume stress core-stability fixture from outputs/ci_outputs/",
+        )
+
+    def test_write_core_stability_fixture_generates_complete_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "core_stability.json"
+            _write_core_stability_fixture(
+                path,
+                dataset="semi_real_5000_realistic_ci_fixture",
+                runs=3,
+                runs_completed=3,
+                is_complete=True,
+                similarity_threshold=0.68,
+                merge_threshold=0.82,
+            )
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(payload.get("dataset"), "semi_real_5000_realistic_ci_fixture")
+            self.assertEqual(payload.get("runs"), 3)
+            self.assertEqual(payload.get("runs_completed"), 3)
+            self.assertEqual(payload.get("is_complete"), True)
 
 
 if __name__ == "__main__":

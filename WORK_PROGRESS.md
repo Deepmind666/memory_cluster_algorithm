@@ -2482,3 +2482,36 @@
   - [x] 清单规范已绑定 core-stability 完整性条件
   - [x] 证据包与报告重新构建并通过
   - [x] 全量自查通过
+
+## Entry R-043-CI-Bundle-CoreStability-Integration
+- Timestamp: 2026-02-14 15:34:00 +08:00
+- Stage: 下一轮推进（将 core-stability 门禁实装进 CI 轻量流水）
+- Actions:
+  - 升级 `scripts/run_ci_guardrail_bundle.py`：
+    - 新增 core-stability fixture 生成器；
+    - CI bundle 自动生成：
+      - `outputs/ci_outputs/core_claim_stability_ci_realistic.json`
+      - `outputs/ci_outputs/core_claim_stability_ci_stress.json`
+    - `run_stage2_guardrail.py` 调用链新增两个 `--core-stability` 参数（CI 默认执行，不依赖手工传参）。
+  - 升级 `scripts/check_ci_output_isolation.py`：
+    - 新增 `--core-stability` 到受控输出参数集合；
+    - 新增 core-stability root JSON 路径违规检查；
+    - 默认 bundle 命令构造同步新增 core-stability fixture 路径。
+  - 升级 workflow artifact：
+    - `.github/workflows/stage2-quality-gate.yml` 上传 core-stability fixture JSON；
+    - `.github/workflows/stage2-nightly-trend.yml` 上传 core-stability fixture JSON。
+  - 测试同步：
+    - `tests/test_ci_guardrail_bundle_unit.py` 新增 fixture 写入测试并更新命令路径断言；
+    - `tests/test_ci_output_isolation_unit.py` 新增 core-stability root-path 违规检测测试。
+- Verification:
+  - `python -m unittest tests.test_ci_guardrail_bundle_unit tests.test_ci_output_isolation_unit -v` PASS (`9/9`)
+  - `python scripts/run_ci_guardrail_bundle.py --dataset-size 240 --benchmark-fragment-count 120 --runs 1 --warmup-runs 0` PASS（guardrail `check_count=14`, `blocker_failures=0`）
+  - `python scripts/check_ci_output_isolation.py --output outputs/ci_outputs/output_isolation_check.json` PASS (`passed=true`, `violation_count=0`)
+  - `python -m unittest discover -s tests -p "test_*.py"` PASS (`102/102`)
+  - `python -m compileall -q src scripts tests` PASS
+- Review Checklist:
+  - [x] core-stability 门禁已进入 CI bundle 默认执行链路
+  - [x] CI 路径隔离策略覆盖 `--core-stability` 参数
+  - [x] workflow artifact 可追踪 core-stability fixture 输入
+  - [x] 相关单测覆盖已补齐
+  - [x] 全量自查通过

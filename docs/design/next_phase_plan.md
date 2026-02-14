@@ -289,3 +289,20 @@ Next:
 1. Add a CI smoke invocation for `run_stage2_guardrail.py --core-stability ...` on lightweight fixture outputs.
 2. Keep weekly/nightly rerun discipline for stability artifacts to avoid stale `is_complete` snapshots.
 3. Continue ANN optional-path freeze policy until active speedup is stably positive.
+
+## R-043 Plan Update (2026-02-14)
+Completed:
+- Implemented CI smoke invocation for `run_stage2_guardrail.py --core-stability ...` in real bundle execution path:
+  - `run_ci_guardrail_bundle.py` now creates CI fixture core-stability JSONs and passes them into guardrail command.
+- Extended CI path-isolation checks:
+  - `check_ci_output_isolation.py` now validates `--core-stability` paths.
+- Synced workflow artifacts:
+  - stage2 quality/nightly workflows now upload CI core-stability fixture JSON files.
+- Added/updated unit tests:
+  - `tests/test_ci_guardrail_bundle_unit.py`
+  - `tests/test_ci_output_isolation_unit.py`
+
+Next:
+1. Optionally promote a strict mode in CI bundle to fail when ANN active positive-speed warning persists for a configurable streak.
+2. Keep core-stability fixture contract minimal and stable (`dataset/runs/runs_completed/is_complete`) to avoid CI flakiness.
+3. Continue algorithm-track improvements while keeping stage2 gate deterministic on hosted runners.

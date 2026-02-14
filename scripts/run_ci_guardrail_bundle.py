@@ -72,6 +72,30 @@ def _write_semi_real_dataset(path: Path, *, fragment_count: int, seed: int, prof
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _write_core_stability_fixture(
+    path: Path,
+    *,
+    dataset: str,
+    runs: int,
+    runs_completed: int,
+    is_complete: bool,
+    similarity_threshold: float,
+    merge_threshold: float,
+) -> None:
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "dataset": str(dataset),
+        "runs": int(runs),
+        "runs_completed": int(runs_completed),
+        "is_complete": bool(is_complete),
+        "similarity_threshold": float(similarity_threshold),
+        "merge_threshold": float(merge_threshold),
+        "summary": {},
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def _build_bundle_commands(
     *,
     py: str,
@@ -81,6 +105,8 @@ def _build_bundle_commands(
     warmups: int,
     realistic_dataset: Path,
     stress_dataset: Path,
+    core_stability_realistic: Path,
+    core_stability_stress: Path,
     ci_outputs: Path,
     ci_reports: Path,
 ) -> list[list[str]]:
@@ -201,6 +227,10 @@ def _build_bundle_commands(
             stage2_guardrail.as_posix(),
             "--report",
             (ci_reports / "stage2_guardrail_report.md").as_posix(),
+            "--core-stability",
+            core_stability_realistic.as_posix(),
+            "--core-stability",
+            core_stability_stress.as_posix(),
         ],
     ]
 
@@ -232,6 +262,26 @@ def main() -> int:
     stress_dataset = outputs / f"ci_semi_real_{size}_stress.jsonl"
     _write_semi_real_dataset(realistic_dataset, fragment_count=size, seed=int(args.seed), profile="realistic")
     _write_semi_real_dataset(stress_dataset, fragment_count=size, seed=int(args.seed), profile="stress")
+    core_stability_realistic = ci_outputs / "core_claim_stability_ci_realistic.json"
+    core_stability_stress = ci_outputs / "core_claim_stability_ci_stress.json"
+    _write_core_stability_fixture(
+        core_stability_realistic,
+        dataset="semi_real_5000_realistic_ci_fixture",
+        runs=max(1, int(runs)),
+        runs_completed=max(1, int(runs)),
+        is_complete=True,
+        similarity_threshold=0.68,
+        merge_threshold=0.82,
+    )
+    _write_core_stability_fixture(
+        core_stability_stress,
+        dataset="semi_real_5000_stress_ci_fixture",
+        runs=max(1, int(runs)),
+        runs_completed=max(1, int(runs)),
+        is_complete=True,
+        similarity_threshold=1.1,
+        merge_threshold=0.05,
+    )
 
     commands = _build_bundle_commands(
         py=py,
@@ -241,6 +291,8 @@ def main() -> int:
         warmups=warmups,
         realistic_dataset=realistic_dataset,
         stress_dataset=stress_dataset,
+        core_stability_realistic=core_stability_realistic,
+        core_stability_stress=core_stability_stress,
         ci_outputs=ci_outputs,
         ci_reports=ci_reports,
     )

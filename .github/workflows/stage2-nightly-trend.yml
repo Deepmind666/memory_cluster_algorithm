@@ -57,6 +57,8 @@ jobs:
           path: |
             outputs/ci_outputs/stage2_guardrail.json
             outputs/ci_outputs/output_isolation_check.json
+            outputs/ci_outputs/core_claim_stability_ci_realistic.json
+            outputs/ci_outputs/core_claim_stability_ci_stress.json
             outputs/stage2_guardrail_trend.json
             outputs/ci_reports/stage2_guardrail_report.md
             outputs/ci_reports/candidate_filter_benchmark_report.md

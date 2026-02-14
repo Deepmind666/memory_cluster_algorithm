@@ -57,6 +57,8 @@ jobs:
             outputs/ci_outputs/candidate_profile_validation_realistic.json
             outputs/ci_outputs/candidate_profile_validation_stress.json
             outputs/ci_outputs/ann_hybrid_benchmark.json
+            outputs/ci_outputs/core_claim_stability_ci_realistic.json
+            outputs/ci_outputs/core_claim_stability_ci_stress.json
             outputs/ci_reports/candidate_filter_benchmark_report.md
             outputs/ci_reports/candidate_profile_validation_synthetic_active_report.md
             outputs/ci_reports/candidate_profile_validation_realistic_report.md
